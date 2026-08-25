@@ -1,0 +1,49 @@
+# Render blueprint — deploys the Chikbo API (apps/api).
+#
+# The frontend deploys separately on Vercel (apps/web/vercel.json); the
+# database is Neon Postgres, already cloud-hosted. Fill the sync:false env
+# vars in the Render dashboard on first deploy, and add the Firebase
+# service-account JSON as a Secret File named firebase-service-account.json
+# (Environment -> Secret Files) — FCM_SERVICE_ACCOUNT_JSON below points at it.
+#
+# Note: admin image uploads land on the service's local disk, which is
+# ephemeral on the free plan — they disappear on redeploy. Seeded product
+# images are committed to the repo so they survive. Move to S3/Cloudinary or
+# a Render Disk before relying on admin uploads in production.
+services:
+  - type: web
+    name: chikbo-api
+    runtime: node
+    plan: free
+    buildCommand: npm install --workspace packages/shared --workspace apps/api && npm run build --workspace packages/shared && npm run prisma:generate --workspace apps/api && npm run build --workspace apps/api
+    startCommand: npm run start --workspace apps/api
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # Neon pooled connection string
+      - key: DIRECT_URL
+        sync: false # Neon non-pooled endpoint (migrations)
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: WEB_APP_URL
+        sync: false # your Vercel URL, e.g. https://chikbo.vercel.app
+      - key: CORS_ORIGINS
+        sync: false # comma-separated allowed origins (Vercel URL)
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: SMTP_FROM
+        sync: false
+      - key: FIREBASE_WEB_API_KEY
+        sync: false
+      - key: FCM_SERVICE_ACCOUNT_JSON
+        value: /etc/secrets/firebase-service-account.json
