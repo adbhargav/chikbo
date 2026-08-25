@@ -61,4 +61,16 @@ export const googleAuthEnabled = Boolean(parsed.data.GOOGLE_CLIENT_ID);
 export const firebaseAuthEnabled = Boolean(
   parsed.data.FCM_SERVICE_ACCOUNT_JSON && parsed.data.FIREBASE_WEB_API_KEY,
 );
-export const corsOrigins = env.CORS_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean);
+/**
+ * Allowed browser origins. WEB_APP_URL is always included — the storefront
+ * must be able to call its own API even if CORS_ORIGINS forgets it — and
+ * trailing slashes are stripped so `https://site.app/` matches the Origin
+ * header (which never carries one).
+ */
+export const corsOrigins = [
+  ...new Set(
+    [...env.CORS_ORIGINS.split(','), env.WEB_APP_URL]
+      .map((s) => s.trim().replace(/\/+$/, ''))
+      .filter(Boolean),
+  ),
+];
