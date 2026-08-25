@@ -12,7 +12,8 @@ const addressBody = z.object({
   fullName: z.string().min(2).max(100),
   phone: z.string().regex(/^[6-9]\d{9}$/, 'Enter a valid 10-digit Indian mobile number'),
   line1: z.string().min(3).max(200),
-  line2: z.string().max(200).optional(),
+  // Clients send null when the line is left blank — accept null as well as absent.
+  line2: z.string().max(200).nullish(),
   city: z.string().min(2).max(100),
   state: z.string().min(2).max(100),
   pincode: z.string().regex(/^[1-9][0-9]{5}$/, 'Enter a valid 6-digit pincode'),
