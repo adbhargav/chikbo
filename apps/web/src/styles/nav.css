@@ -47,6 +47,11 @@
   will-change: transform;
 }
 
+.nav-drawer-logo {
+  display: inline-flex;
+  align-items: center;
+}
+
 .nav-drawer-head {
   display: flex;
   align-items: center;
