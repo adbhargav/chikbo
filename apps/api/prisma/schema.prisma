@@ -1,0 +1,753 @@
+// Chikbo e-commerce schema.
+// Money is stored as integer paise everywhere (₹1 = 100) — never floats.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Neon (and other poolers) front queries with PgBouncer, which cannot run
+  // DDL. Prisma uses this non-pooled endpoint for db push / migrate and falls
+  // back to DATABASE_URL when it is unset.
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Users, auth, RBAC
+// ---------------------------------------------------------------------------
+
+enum UserRole {
+  CUSTOMER
+  STAFF
+  SUPER_ADMIN
+}
+
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  phone         String?    @unique
+  /// Null for accounts created through Google Sign-In (no local password).
+  passwordHash  String?
+  name          String
+  /// Google account subject id ("sub") once linked.
+  googleId      String?    @unique
+  avatarUrl     String?
+  emailVerified Boolean    @default(false)
+  role          UserRole   @default(CUSTOMER)
+  staffRoleId   String?
+  staffRole     StaffRole? @relation(fields: [staffRoleId], references: [id], onDelete: SetNull)
+  isActive      Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  addresses         Address[]
+  cartItems         CartItem[]
+  wishlist          WishlistItem[]
+  orders            Order[]
+  reviews           Review[]
+  refreshTokens     RefreshToken[]
+  passwordResets    PasswordResetToken[]
+  deviceTokens      DeviceToken[]
+  notifications     Notification[]
+  couponRedemptions CouponRedemption[]
+  returnRequests    ReturnRequest[]
+  auditLogs         AuditLog[]
+
+  @@index([role])
+  @@index([createdAt])
+}
+
+model StaffRole {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  /// JSON array of Permission strings from @chikbo/shared
+  permissions Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  users       User[]
+}
+
+model RefreshToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+/// Single-use password-reset tokens. Only the SHA-256 hash is stored, so a
+/// database leak cannot be replayed against the reset endpoint.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model DeviceToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  platform  String // "ios" | "android" | "web"
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Address {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fullName  String
+  phone     String
+  line1     String
+  line2     String?
+  city      String
+  state     String
+  pincode   String
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------------
+// SEO
+// ---------------------------------------------------------------------------
+
+/// Site-wide SEO configuration. A singleton: exactly one row, addressed by the
+/// fixed id "default", so the resolver can read it without a lookup strategy.
+model SeoSettings {
+  id String @id @default("default")
+
+  // General
+  siteName           String  @default("Chikbo")
+  defaultTitle       String?
+  /// e.g. "%title% | %siteName%"
+  titleTemplate      String  @default("%title% | %siteName%")
+  defaultDescription String? @db.Text
+  defaultRobots      String  @default("index,follow")
+
+  // Homepage
+  homeTitle       String?
+  homeDescription String? @db.Text
+  homeOgImage     String?
+
+  // Social sharing
+  defaultOgImage      String?
+  defaultTwitterImage String?
+  twitterCardType     String  @default("summary_large_image")
+  twitterSite         String?
+  facebookAppId       String?
+
+  // Organization (drives Organization JSON-LD)
+  organizationName        String?
+  organizationLogo        String?
+  organizationDescription String? @db.Text
+  organizationPhone       String?
+  organizationEmail       String?
+  organizationAddress     String?
+  /// JSON array of profile URLs -> schema.org sameAs
+  organizationSocials     Json?
+
+  // Verification & analytics (IDs only — never secrets)
+  googleSiteVerification String?
+  googleAnalyticsId      String?
+  googleTagManagerId     String?
+
+  updatedAt DateTime @updatedAt
+}
+
+enum RedirectSource {
+  PRODUCT_SLUG
+  CATEGORY_SLUG
+  MANUAL
+}
+
+/// 301/302 redirects. Rows are created automatically when a slug changes so
+/// links already in the wild — and the equity behind them — keep working.
+model Redirect {
+  id          String         @id @default(cuid())
+  /// Path only, normalised: leading slash, no host, no query. e.g. /p/old-slug
+  source      String         @unique
+  destination String
+  statusCode  Int            @default(301)
+  origin      RedirectSource @default(MANUAL)
+  hits        Int            @default(0)
+  isActive    Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([isActive])
+}
+
+// ---------------------------------------------------------------------------
+// Catalog
+// ---------------------------------------------------------------------------
+
+model Category {
+  id        String     @id @default(cuid())
+  name      String
+  slug      String     @unique
+  parentId  String?
+  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children  Category[] @relation("CategoryTree")
+  imageUrl  String?
+  imageAlt  String?
+  sortOrder Int        @default(0)
+  isActive  Boolean    @default(true)
+
+  /// SEO overrides — same runtime-fallback contract as Product.
+  seoTitle       String?
+  seoDescription String?   @db.Text
+  seoKeywords    String?
+  canonicalUrl   String?
+  metaRobots     String?
+  ogTitle        String?
+  ogDescription  String?   @db.Text
+  ogImage        String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  products       Product[]
+
+  @@index([parentId])
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+  /// Free-form attributes (fabric, occasion, care...)
+  attributes  Json?
+  /// Merchandising badge, e.g. "New", "Bestseller", "Festive Edit".
+  badge       String?
+  isActive    Boolean  @default(true)
+  ratingAvg   Float?
+  ratingCount Int      @default(0)
+
+  /// SEO overrides. All nullable: when empty the resolver derives a value at
+  /// request time from the product itself, so an untouched product still gets
+  /// good metadata and an admin edit always wins. Generated values are never
+  /// written back.
+  seoTitle           String?
+  seoDescription     String?  @db.Text
+  seoKeywords        String?
+  canonicalUrl       String?
+  metaRobots         String?
+  ogTitle            String?
+  ogDescription      String?  @db.Text
+  ogImage            String?
+  twitterTitle       String?
+  twitterDescription String?  @db.Text
+  twitterImage       String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  images   ProductImage[]
+  variants ProductVariant[]
+  reviews  Review[]
+  wishlist WishlistItem[]
+
+  @@index([categoryId, isActive])
+  @@index([createdAt])
+  @@index([name])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String?
+  sortOrder Int     @default(0)
+
+  @@index([productId])
+}
+
+model ProductVariant {
+  id                   String   @id @default(cuid())
+  productId            String
+  product              Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku                  String   @unique
+  barcode              String?  @unique
+  size                 String?
+  color                String?
+  weightGrams          Int?
+  priceInPaise         Int
+  discountPriceInPaise Int?
+  stockQty             Int      @default(0)
+  lowStockThreshold    Int      @default(5)
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  inventoryLogs InventoryLog[]
+
+  @@index([productId])
+  @@index([stockQty])
+}
+
+enum InventoryReason {
+  MANUAL_ADJUSTMENT
+  ORDER_PLACED
+  ORDER_CANCELLED
+  RETURN_RECEIVED
+  RESTOCK
+  CORRECTION
+}
+
+model InventoryLog {
+  id        String          @id @default(cuid())
+  variantId String
+  variant   ProductVariant  @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  delta     Int
+  qtyAfter  Int
+  reason    InventoryReason
+  refType   String? // "order" | "return" | ...
+  refId     String?
+  note      String?
+  actorId   String?
+  createdAt DateTime        @default(now())
+
+  @@index([variantId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Cart & wishlist
+// ---------------------------------------------------------------------------
+
+model CartItem {
+  id        String         @id @default(cuid())
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  qty       Int
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@unique([userId, variantId])
+  @@index([userId])
+}
+
+model WishlistItem {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+}
+
+// ---------------------------------------------------------------------------
+// Coupons
+// ---------------------------------------------------------------------------
+
+enum CouponType {
+  PERCENT
+  FLAT
+}
+
+model Coupon {
+  id                 String     @id @default(cuid())
+  code               String     @unique
+  type               CouponType
+  /// PERCENT: basis points off (1000 = 10%). FLAT: paise off.
+  value              Int
+  minOrderInPaise    Int        @default(0)
+  maxDiscountInPaise Int?
+  validFrom          DateTime
+  validUntil         DateTime
+  usageLimit         Int?
+  perUserLimit       Int        @default(1)
+  isActive           Boolean    @default(true)
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+
+  redemptions CouponRedemption[]
+  orders      Order[]
+}
+
+model CouponRedemption {
+  id        String   @id @default(cuid())
+  couponId  String
+  coupon    Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orderId   String   @unique
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([couponId, userId])
+}
+
+// ---------------------------------------------------------------------------
+// Orders
+// ---------------------------------------------------------------------------
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  RETURN_REQUESTED
+  RETURNED
+  REFUND_INITIATED
+  REFUNDED
+}
+
+model Order {
+  id             String      @id @default(cuid())
+  orderNumber    String      @unique
+  userId         String
+  user           User        @relation(fields: [userId], references: [id])
+  status         OrderStatus @default(PENDING)
+  /// Client-supplied idempotency key; prevents duplicate order creation.
+  idempotencyKey String      @unique
+
+  subtotalInPaise Int
+  discountInPaise Int @default(0)
+  shippingInPaise Int @default(0)
+  totalInPaise    Int
+
+  couponId String?
+  coupon   Coupon? @relation(fields: [couponId], references: [id], onDelete: SetNull)
+
+  // Shipping address snapshot (immutable once ordered)
+  shipFullName String
+  shipPhone    String
+  shipLine1    String
+  shipLine2    String?
+  shipCity     String
+  shipState    String
+  shipPincode  String
+
+  cancelReason String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  items            OrderItem[]
+  payments         Payment[]
+  shipments        Shipment[]
+  statusHistory    OrderStatusHistory[]
+  returnRequests   ReturnRequest[]
+  couponRedemption CouponRedemption?
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id        String         @id @default(cuid())
+  orderId   String
+  order     Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+
+  // Snapshots at time of purchase
+  productName      String
+  sku              String
+  size             String?
+  color            String?
+  thumbnailUrl     String?
+  unitPriceInPaise Int
+  qty              Int
+  lineTotalInPaise Int
+
+  returnRequests ReturnRequest[]
+
+  @@index([orderId])
+  @@index([variantId])
+}
+
+model OrderStatusHistory {
+  id        String      @id @default(cuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderStatus
+  note      String?
+  actorId   String?
+  createdAt DateTime    @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Payments (Razorpay)
+// ---------------------------------------------------------------------------
+
+enum PaymentStatus {
+  CREATED
+  AUTHORIZED
+  CAPTURED
+  FAILED
+  REFUND_INITIATED
+  REFUNDED
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  orderId           String
+  order             Order         @relation(fields: [orderId], references: [id])
+  razorpayOrderId   String        @unique
+  razorpayPaymentId String?       @unique
+  amountInPaise     Int
+  currency          String        @default("INR")
+  status            PaymentStatus @default(CREATED)
+  method            String?
+  errorCode         String?
+  errorDescription  String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  refunds Refund[]
+
+  @@index([orderId])
+  @@index([status])
+}
+
+enum RefundStatus {
+  INITIATED
+  PROCESSED
+  FAILED
+}
+
+model Refund {
+  id               String       @id @default(cuid())
+  paymentId        String
+  payment          Payment      @relation(fields: [paymentId], references: [id])
+  razorpayRefundId String?      @unique
+  amountInPaise    Int
+  status           RefundStatus @default(INITIATED)
+  reason           String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  @@index([paymentId])
+}
+
+/// Processed webhook events (idempotency guard for Razorpay & Shiprocket).
+model WebhookEvent {
+  id          String   @id @default(cuid())
+  source      String // "razorpay" | "shiprocket"
+  /// Unique event identifier (x-razorpay-event-id, or a derived hash)
+  externalId  String
+  eventType   String
+  payload     Json
+  processedAt DateTime @default(now())
+
+  @@unique([source, externalId])
+  @@index([source, processedAt])
+}
+
+// ---------------------------------------------------------------------------
+// Shipping (Shiprocket)
+// ---------------------------------------------------------------------------
+
+enum ShipmentStatus {
+  CREATED
+  AWB_ASSIGNED
+  PICKUP_SCHEDULED
+  IN_TRANSIT
+  OUT_FOR_DELIVERY
+  DELIVERED
+  RTO
+  CANCELLED
+}
+
+model Shipment {
+  id                   String         @id @default(cuid())
+  orderId              String
+  order                Order          @relation(fields: [orderId], references: [id])
+  shiprocketOrderId    String?
+  shiprocketShipmentId String?
+  awbCode              String?        @unique
+  courierName          String?
+  status               ShipmentStatus @default(CREATED)
+  isReturn             Boolean        @default(false)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+
+  trackingEvents ShipmentTrackingEvent[]
+
+  @@index([orderId])
+}
+
+model ShipmentTrackingEvent {
+  id          String   @id @default(cuid())
+  shipmentId  String
+  shipment    Shipment @relation(fields: [shipmentId], references: [id], onDelete: Cascade)
+  status      String
+  description String?
+  location    String?
+  occurredAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([shipmentId, occurredAt])
+}
+
+// ---------------------------------------------------------------------------
+// Returns
+// ---------------------------------------------------------------------------
+
+enum ReturnStatus {
+  REQUESTED
+  APPROVED
+  REJECTED
+  PICKUP_SCHEDULED
+  IN_TRANSIT
+  RECEIVED
+  REFUNDED
+}
+
+model ReturnRequest {
+  id          String       @id @default(cuid())
+  orderId     String
+  order       Order        @relation(fields: [orderId], references: [id])
+  orderItemId String
+  orderItem   OrderItem    @relation(fields: [orderItemId], references: [id])
+  userId      String
+  user        User         @relation(fields: [userId], references: [id])
+  reason      String
+  /// URLs of damage evidence photos (genuine-damage return policy)
+  imageUrls   Json?
+  status      ReturnStatus @default(REQUESTED)
+  adminNote   String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([orderId])
+  @@index([status, createdAt])
+}
+
+// ---------------------------------------------------------------------------
+// Homepage CMS (see docs/marketplace-redesign.md)
+// ---------------------------------------------------------------------------
+
+enum HomeSectionType {
+  HERO_CAROUSEL // full-bleed banners
+  CATEGORY_RAIL // circular category chips
+  CATEGORY_CARDS // editorial category cards
+  BANNER_GRID // 2-4 offer tiles with a label
+  PRODUCT_CAROUSEL // products by category / newest / manual
+  EDITORIAL // image + copy + CTA strip
+}
+
+/// One widget on the homepage. Staff order them in the admin; the storefront
+/// renders whatever it is given.
+model HomeSection {
+  id        String          @id @default(cuid())
+  type      HomeSectionType
+  title     String?
+  subtitle  String?
+  sortOrder Int             @default(0)
+  isActive  Boolean         @default(true)
+  /// PRODUCT_CAROUSEL: { source: 'newest'|'category'|'manual', categorySlug?, productIds?, limit }
+  config    Json?
+  /// Scheduled merchandising window (null = always on).
+  startsAt  DateTime?
+  endsAt    DateTime?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  items HomeSectionItem[]
+
+  @@index([isActive, sortOrder])
+  @@index([sortOrder])
+}
+
+model HomeSectionItem {
+  id             String      @id @default(cuid())
+  sectionId      String
+  section        HomeSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  imageUrl       String?
+  mobileImageUrl String?
+  title          String?
+  /// e.g. "Up to 70% off"
+  subtitle       String?
+  ctaLabel       String?
+  /// /c/sarees, /p/<slug>, or absolute
+  href           String?
+  sortOrder      Int         @default(0)
+  isActive       Boolean     @default(true)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([sectionId, sortOrder])
+  @@index([isActive, sortOrder])
+}
+
+// ---------------------------------------------------------------------------
+// Reviews, notifications, audit
+// ---------------------------------------------------------------------------
+
+model Review {
+  id               String   @id @default(cuid())
+  productId        String
+  product          Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating           Int
+  title            String?
+  body             String?
+  verifiedPurchase Boolean  @default(false)
+  isApproved       Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([productId, userId])
+  @@index([productId, isApproved])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String // "order_update" | "promo" | ...
+  title     String
+  body      String
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  actorId   String
+  actor     User     @relation(fields: [actorId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  detail    Json?
+  createdAt DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([entity, entityId])
+}

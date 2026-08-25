@@ -1,0 +1,700 @@
+.product-page .breadcrumbs {
+  margin-bottom: 24px;
+}
+
+.product-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 56px;
+  align-items: start;
+}
+
+/* ---- Gallery ---- */
+.gallery {
+  position: sticky;
+  top: 100px;
+}
+
+.gallery-main {
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  background: var(--cream-100);
+  border: var(--border-soft);
+}
+
+.gallery-main-img,
+.gallery-main .img-fallback {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gallery-thumbs {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  overflow-x: auto;
+}
+
+.gallery-thumb {
+  width: 72px;
+  flex: none;
+  aspect-ratio: 3 / 4;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  background: var(--cream-100);
+  transition: border-color 160ms var(--ease);
+  padding: 0;
+}
+
+.gallery-thumb--active {
+  border-color: var(--brand-600);
+}
+
+.gallery-thumb-img,
+.gallery-thumb .img-fallback {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gallery-thumb .img-fallback-name {
+  display: none;
+}
+
+.gallery-thumb .img-fallback-mono {
+  font-size: 20px;
+}
+
+/* ---- Buy box ---- */
+.buy-box h1 {
+  font-size: clamp(26px, 3.4vw, 38px);
+  font-weight: 500;
+}
+
+.buy-rating {
+  margin-top: 10px;
+}
+
+.buy-price {
+  margin-top: 16px;
+  padding-bottom: 20px;
+  border-bottom: var(--border-soft);
+}
+
+.variant-group {
+  border: none;
+  padding: 20px 0 0;
+}
+
+.variant-group legend {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-900);
+}
+
+.variant-selected {
+  color: var(--ink-500);
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.variant-group .filter-chips {
+  margin-top: 12px;
+}
+
+.buy-box .stock-note {
+  margin-top: 16px;
+}
+
+.buy-box .alert {
+  margin-top: 16px;
+  margin-bottom: 0;
+}
+
+.buy-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+
+.buy-cta {
+  flex: 1;
+  min-width: 180px;
+}
+
+.wishlist-btn {
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--ink-300);
+}
+
+.wishlist-btn--on {
+  color: var(--brand-600);
+  border-color: var(--brand-600);
+  background: var(--brand-50);
+}
+
+.delivery-note {
+  margin-top: 18px;
+  font-size: 13.5px;
+  color: var(--ink-500);
+  padding-bottom: 20px;
+}
+
+/* ---- Reviews ---- */
+.reviews {
+  margin-top: 80px;
+}
+
+.review-form {
+  margin-bottom: 32px;
+}
+
+.rating-input {
+  border: none;
+  padding: 0;
+  margin-bottom: 16px;
+}
+
+.rating-input legend {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-900);
+  margin-bottom: 6px;
+}
+
+.rating-star {
+  font-size: 28px;
+  color: var(--ink-300);
+  padding: 2px 4px;
+  transition: color 140ms var(--ease), transform 140ms var(--ease);
+}
+
+.rating-star--on {
+  color: var(--gold-500);
+}
+
+.rating-star:hover {
+  transform: scale(1.15);
+}
+
+.review-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.review-item {
+  border: var(--border-soft);
+  border-radius: var(--radius-card);
+  background: #fff;
+  padding: 20px 24px;
+}
+
+.review-item-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.review-author {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink-900);
+}
+
+.review-date {
+  font-size: 13px;
+  margin-left: auto;
+}
+
+.review-item h3 {
+  font-family: var(--font-ui);
+  font-size: 15px;
+  margin-bottom: 4px;
+  letter-spacing: 0;
+}
+
+.review-item p {
+  font-size: 14.5px;
+  color: var(--ink-700);
+}
+
+@media (max-width: 900px) {
+  .product-layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .gallery {
+    position: static;
+  }
+}
+
+/* ---- Atelier additions: stacked gallery slides, buy box, accordion ---- */
+
+.gallery-main {
+  position: relative;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* AnimatePresence stacks the outgoing and incoming slide — both fill the frame. */
+.gallery-slide {
+  position: absolute;
+  inset: 0;
+}
+
+.gallery-slide .silk-media,
+.gallery-main-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.gallery-thumb-img,
+.gallery-thumb .silk-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.gallery-thumb {
+  position: relative;
+  padding: 0;
+  cursor: pointer;
+  background: var(--cream-100);
+  transition: border-color 220ms var(--ease), transform 220ms var(--ease);
+}
+
+.gallery-thumb:hover {
+  transform: translateY(-2px);
+}
+
+/* ---- Buy box ---- */
+
+.buy-title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(1.7rem, 3vw, 2.6rem);
+  line-height: 1.1;
+  letter-spacing: -0.022em;
+  color: var(--ink-900);
+  margin: 0 0 10px;
+}
+
+.stock-note {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--brand-700);
+  font-weight: 500;
+}
+
+.buy-cta-wrap {
+  flex: 1 1 220px;
+  display: block;
+}
+
+.buy-cta-wrap .buy-cta {
+  width: 100%;
+}
+
+.buy-cta-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.buy-cta--added {
+  background: var(--success);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .acc-chevron,
+  .gallery-thumb {
+    transition: none !important;
+  }
+}
+
+/* ==========================================================================
+   PDP — marketplace anatomy
+   Vertical thumb strip beside the image, price block with % off, stock
+   urgency, wishlist + bag actions, pincode checker, trust row.
+   ========================================================================== */
+
+.product-layout {
+  grid-template-columns: minmax(0, 1.04fr) minmax(0, 1fr);
+  gap: clamp(24px, 3.6vw, 48px);
+}
+
+/* ---- Gallery: thumbs left on desktop, below on mobile ---- */
+
+.gallery {
+  position: sticky;
+  top: 92px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.gallery-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.gallery-thumbs {
+  flex: 0 0 66px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 0;
+  max-height: 560px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+.gallery-thumb {
+  width: 100%;
+}
+
+.gallery-badge {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 4;
+  background: rgba(26, 23, 20, 0.88);
+  color: var(--cream-50);
+  border: 1px solid rgba(176, 141, 62, 0.6);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: var(--radius-pill);
+  padding: 5px 12px;
+}
+
+/* ---- Buy box head ---- */
+
+.buy-cat {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+  text-decoration: none;
+  margin-bottom: 8px;
+  transition: color 160ms var(--ease);
+}
+
+.buy-cat:hover,
+.buy-cat:focus-visible {
+  color: var(--brand-600);
+}
+
+/* ---- Related collections (internal linking) ---- */
+.pdp-related {
+  margin-top: 28px;
+  padding: 16px 18px;
+  background: var(--cream-50);
+  border: var(--border-soft);
+  border-radius: var(--radius-card);
+}
+
+.pdp-related-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+  margin-bottom: 8px;
+}
+
+.pdp-related ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+}
+
+.pdp-related a {
+  font-size: 13.5px;
+  color: var(--brand-600);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 160ms var(--ease), color 160ms var(--ease);
+}
+
+.pdp-related a:hover,
+.pdp-related a:focus-visible {
+  color: var(--brand-700);
+  border-bottom-color: currentColor;
+}
+
+.buy-title {
+  font-size: clamp(1.45rem, 2.4vw, 2.1rem);
+}
+
+.buy-rating {
+  margin-top: 8px;
+}
+
+/* ---- Price block ---- */
+
+.buy-price {
+  margin-top: 14px;
+  padding-bottom: 16px;
+  border-bottom: var(--border-soft);
+}
+
+.pdp-price {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+}
+
+.pdp-price-now {
+  font-size: clamp(24px, 3vw, 30px);
+  font-weight: 700;
+  color: var(--ink-900);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.015em;
+}
+
+.pdp-price-off {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--success);
+}
+
+.pdp-mrp {
+  margin-top: 5px;
+  font-size: 13px;
+  color: var(--ink-500);
+  font-variant-numeric: tabular-nums;
+}
+
+.pdp-mrp-value {
+  text-decoration: line-through;
+}
+
+.stock-note--urgent {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+  padding: 5px 12px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-50);
+  color: var(--brand-700);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+/* ---- Quantity + actions ---- */
+
+.buy-qty {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.buy-qty-label {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-900);
+}
+
+.buy-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+  margin-top: 18px;
+  align-items: stretch;
+}
+
+.buy-wishlist {
+  position: relative;
+  gap: 8px;
+  padding-inline: 16px;
+}
+
+.buy-wishlist--on {
+  color: var(--brand-600);
+  border-color: var(--brand-600);
+  background: var(--brand-50);
+}
+
+.buy-wishlist--on:hover:not(:disabled) {
+  background: var(--brand-600);
+  color: #fff;
+  border-color: var(--brand-600);
+}
+
+.buy-cta-wrap {
+  display: block;
+  flex: none;
+}
+
+.buy-cta-wrap .buy-cta {
+  width: 100%;
+  height: 100%;
+}
+
+@media (max-width: 480px) {
+  .buy-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- Pincode checker ---- */
+
+.pincode {
+  margin-top: 22px;
+  padding: 16px 18px;
+  border: var(--border-soft);
+  border-radius: var(--radius-card);
+  background: #fff;
+}
+
+.pincode-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-900);
+}
+
+.pincode-title svg {
+  color: var(--gold-500);
+}
+
+.pincode-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.pincode-input {
+  max-width: 190px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+}
+
+.pincode-result {
+  margin-top: 10px;
+  font-size: 13px;
+  min-height: 1.2em;
+}
+
+.pincode-ok {
+  color: var(--success);
+  font-weight: 600;
+}
+
+.pincode-error {
+  color: var(--error);
+  font-weight: 500;
+}
+
+/* ---- Trust row ---- */
+
+.trust-row {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 16px 0 0;
+  border-top: var(--border-soft);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 22px;
+}
+
+.trust-row li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--ink-700);
+}
+
+.trust-row svg {
+  color: var(--gold-500);
+  flex: none;
+}
+
+/* ---- Accordions + similar products ---- */
+
+.product-page .accordion {
+  margin-top: 22px;
+}
+
+.product-page .home-band {
+  padding-top: clamp(48px, 6vw, 72px);
+  padding-bottom: 0;
+}
+
+.product-page .home-band .container {
+  padding-inline: 0;
+  max-width: none;
+}
+
+.product-page .reviews {
+  margin-top: clamp(48px, 6vw, 72px);
+}
+
+/* ---- Mobile: thumbs move below the main image ---- */
+
+@media (max-width: 900px) {
+  .product-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 28px;
+  }
+
+  .gallery {
+    position: static;
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .gallery-thumbs {
+    flex: none;
+    flex-direction: row;
+    max-height: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    margin-top: 10px;
+  }
+
+  .gallery-thumb {
+    width: 62px;
+    flex: none;
+  }
+}

@@ -1,0 +1,320 @@
+/**
+ * Auth screens — split editorial layout.
+ * Left: photography + brand story. Right: the form.
+ * Below 900px the image panel is dropped and the form fills the screen.
+ */
+
+.auth-shell {
+  display: grid;
+  grid-template-columns: 1.05fr 1fr;
+  min-height: calc(100svh - var(--header-h, 100px));
+  background: var(--cream-50);
+}
+
+/* ------------------------------------------------------------ Editorial side */
+
+.auth-aside {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  display: flex;
+  align-items: flex-end;
+}
+
+.auth-aside-art {
+  position: absolute;
+  inset: 0;
+}
+
+.auth-aside-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(20, 16, 13, 0.28) 0%,
+    rgba(20, 16, 13, 0.42) 45%,
+    rgba(20, 16, 13, 0.86) 100%
+  );
+}
+
+.auth-aside-content {
+  position: relative;
+  z-index: 1;
+  padding: clamp(32px, 4vw, 64px);
+  max-width: 34rem;
+  color: var(--cream-50);
+}
+
+.auth-aside-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.auth-aside-logo .logo-word {
+  color: var(--cream-50);
+}
+
+.auth-aside-mark {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.28em;
+  color: rgba(253, 251, 247, 0.9);
+}
+
+.auth-aside-mark span {
+  color: var(--brand-500);
+}
+
+.auth-aside-quote {
+  margin: 22px 0 16px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-style: italic;
+  font-size: clamp(1.2rem, 1.7vw, 1.7rem);
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.auth-aside-attribution {
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--gold-500);
+}
+
+/* ----------------------------------------------------------------- Form side */
+
+.auth-main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  padding: clamp(36px, 5vw, 72px) clamp(20px, 4vw, 56px);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 26rem;
+}
+
+.auth-card-mark {
+  display: block;
+  margin-bottom: 24px;
+}
+
+.auth-card-mark span {
+  color: var(--brand-600);
+}
+
+.auth-eyebrow {
+  display: block;
+}
+
+.auth-title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(2rem, 3.2vw, 2.6rem);
+  line-height: 1.06;
+  letter-spacing: -0.025em;
+  color: var(--ink-900);
+  margin: 0.24em 0 0;
+}
+
+.auth-sub {
+  margin: 12px 0 26px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-500);
+}
+
+.auth-card .field + .field {
+  margin-top: 16px;
+}
+
+.auth-card form > .btn {
+  margin-top: 24px;
+}
+
+.auth-switch {
+  margin-top: 24px;
+  font-size: 14.5px;
+  text-align: center;
+  color: var(--ink-500);
+}
+
+.auth-switch a {
+  color: var(--brand-600);
+  font-weight: 600;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 200ms var(--ease);
+}
+
+.auth-switch a:hover {
+  border-bottom-color: var(--brand-600);
+}
+
+.auth-legal {
+  font-size: 12px;
+  color: var(--ink-300);
+  text-align: center;
+}
+
+.auth-legal a {
+  color: var(--ink-500);
+}
+
+/* Row holding the password label and the "Forgot password?" link. */
+.field-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.field-hint-link {
+  font-size: 12.5px;
+  color: var(--ink-500);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color 200ms var(--ease), border-color 200ms var(--ease);
+}
+
+.field-hint-link:hover {
+  color: var(--brand-600);
+  border-bottom-color: var(--brand-600);
+}
+
+/* ------------------------------------------------------------- Google button */
+
+.oauth-block {
+  margin-top: 26px;
+}
+
+.oauth-divider {
+  position: relative;
+  text-align: center;
+  margin-bottom: 18px;
+  color: var(--ink-300);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.oauth-divider span {
+  background: var(--cream-50);
+  padding: 0 14px;
+  position: relative;
+  z-index: 1;
+}
+
+.oauth-divider::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: var(--border-soft, rgba(185, 178, 169, 0.5));
+}
+
+.oauth-button-wrap {
+  position: relative;
+  isolation: isolate;
+}
+
+.oauth-button {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 13px 24px;
+  border-radius: var(--radius-pill, 999px);
+  border: 1px solid var(--ink-300);
+  background: #fff;
+  color: var(--ink-900);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    border-color 220ms var(--ease),
+    box-shadow 220ms var(--ease),
+    transform 220ms var(--ease);
+}
+
+.oauth-button:hover:not(:disabled) {
+  border-color: var(--ink-900);
+  box-shadow: 0 6px 20px rgba(26, 23, 20, 0.08);
+  transform: translateY(-1px);
+}
+
+.oauth-button:disabled {
+  opacity: 0.65;
+  cursor: default;
+}
+
+/**
+ * Google's own button, invisible, stretched across ours. GIS only issues an
+ * ID token for a click it rendered, so the real click target must be theirs;
+ * ours provides the styling. Only present once GIS has initialised.
+ */
+.oauth-overlay {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.oauth-button-wrap--live .oauth-overlay {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.oauth-button-wrap--live .oauth-overlay > div,
+.oauth-button-wrap--live .oauth-overlay iframe {
+  width: 100% !important;
+  height: 100% !important;
+  transform: scale(2); /* guarantees the hit area covers the pill */
+  transform-origin: center;
+}
+
+/* ------------------------------------------------------------------ Feedback */
+
+.auth-card .alert {
+  margin-bottom: 20px;
+}
+
+/* ---------------------------------------------------------------- Responsive */
+
+@media (max-width: 900px) {
+  .auth-shell {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .auth-aside {
+    display: none;
+  }
+
+  .auth-card-mark {
+    display: inline-block;
+  }
+
+  .auth-main {
+    padding-top: clamp(32px, 8vw, 56px);
+    padding-bottom: clamp(48px, 10vw, 80px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oauth-button {
+    transition: none !important;
+  }
+}

@@ -1,0 +1,554 @@
+/* ==========================================================================
+   Chikbo — navigation surfaces
+   Mobile drawer, search overlay and the fixed bottom tab bar.
+   ========================================================================== */
+
+:root {
+  /* Height of the mobile tab bar, excluding the safe-area inset. */
+  --tabbar-h: 62px;
+}
+
+/* Page content is padded so nothing ever hides under the fixed tab bar. */
+@media (max-width: 900px) {
+  .app-shell {
+    padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* ==========================================================================
+   Mobile drawer
+   ========================================================================== */
+
+.nav-drawer-root {
+  position: fixed;
+  inset: 0;
+  z-index: 950;
+}
+
+.nav-drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 23, 20, 0.4);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.nav-drawer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(360px, 88vw);
+  background: var(--cream-50);
+  border-right: 1px solid rgba(185, 178, 169, 0.35);
+  box-shadow: 24px 0 60px rgba(26, 23, 20, 0.2);
+  display: flex;
+  flex-direction: column;
+  will-change: transform;
+}
+
+.nav-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 14px 20px;
+  border-bottom: var(--border-soft);
+  flex: none;
+}
+
+.nav-drawer-scroll {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 20px 48px;
+  overscroll-behavior: contain;
+}
+
+.nav-drawer-search {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid var(--ink-300);
+  border-radius: var(--radius-pill);
+  padding: 11px 16px;
+  color: var(--ink-500);
+  font-size: 14px;
+  text-align: left;
+  margin-bottom: 18px;
+}
+
+.nav-drawer-search span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-accordion {
+  list-style: none;
+  margin: 0 0 24px;
+  padding: 0;
+}
+
+.nav-accordion-item {
+  border-bottom: 1px solid rgba(185, 178, 169, 0.35);
+}
+
+.nav-accordion-trigger,
+.nav-accordion-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 2px;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 500;
+  color: var(--ink-900);
+  text-align: left;
+}
+
+.nav-accordion-link--active {
+  color: var(--brand-600);
+}
+
+.nav-accordion-link--accent {
+  color: var(--gold-500);
+}
+
+.nav-accordion-caret {
+  display: inline-flex;
+  color: var(--ink-500);
+  transition: transform 240ms var(--ease);
+}
+
+.nav-accordion-caret.is-open {
+  transform: rotate(180deg);
+  color: var(--brand-600);
+}
+
+.nav-accordion-panel {
+  overflow: hidden;
+}
+
+.nav-accordion-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 12px 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-accordion-sub {
+  display: block;
+  padding: 8px 0;
+  font-size: 14.5px;
+  color: var(--ink-700);
+}
+
+.nav-accordion-sub:hover {
+  color: var(--brand-600);
+}
+
+.nav-accordion-sub--all {
+  color: var(--brand-600);
+  font-weight: 600;
+}
+
+.nav-drawer-block {
+  margin-bottom: 22px;
+}
+
+.nav-drawer-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold-500);
+  margin-bottom: 8px;
+}
+
+.nav-drawer-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-drawer-links a {
+  display: block;
+  padding: 7px 0;
+  font-size: 14.5px;
+  color: var(--ink-700);
+}
+
+.nav-drawer-links a:hover {
+  color: var(--brand-600);
+}
+
+.nav-drawer-foot {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 13.5px;
+  color: var(--ink-500);
+  padding-top: 8px;
+}
+
+/* ==========================================================================
+   Search overlay
+   ========================================================================== */
+
+.search-overlay-root {
+  position: fixed;
+  inset: 0;
+  z-index: 960;
+}
+
+.search-overlay-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 23, 20, 0.42);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.search-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: var(--cream-50);
+  border-bottom: 1px solid rgba(185, 178, 169, 0.4);
+  box-shadow: 0 30px 70px rgba(26, 23, 20, 0.22);
+  max-height: min(88vh, 760px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  will-change: transform;
+}
+
+.search-overlay-inner {
+  padding-block: 18px 26px;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 2px solid var(--ink-900);
+  padding-bottom: 8px;
+}
+
+.search-bar-icon {
+  display: inline-flex;
+  color: var(--ink-500);
+  flex: none;
+}
+
+.search-overlay-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  font-family: var(--font-display);
+  font-size: clamp(19px, 2.6vw, 28px);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ink-900);
+  padding: 6px 0;
+}
+
+.search-overlay-input::placeholder {
+  color: var(--ink-300);
+}
+
+.search-overlay-input:focus {
+  outline: none;
+}
+
+/* Doubled classes: tokens.css `.btn` / `.icon-btn` are injected after this sheet. */
+.btn.search-bar-submit,
+.icon-btn.search-bar-close {
+  flex: none;
+}
+
+.search-panes {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 30px;
+  margin-top: 20px;
+}
+
+.search-pane-title {
+  font-family: var(--font-ui);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gold-500);
+  margin-bottom: 10px;
+}
+
+.search-hint {
+  font-size: 14px;
+}
+
+.search-results {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 2px 16px;
+}
+
+.search-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 8px;
+  border-radius: 10px;
+  transition: background-color 160ms var(--ease);
+}
+
+.search-result:hover {
+  background: var(--cream-100);
+}
+
+.search-result-media {
+  width: 44px;
+  height: 56px;
+  border-radius: 6px;
+  flex: none;
+}
+
+.search-result-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.search-result-name {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: var(--ink-900);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.search-result-price {
+  font-size: 13px;
+}
+
+.search-result-skeleton {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 7px 8px;
+}
+
+.search-see-all {
+  margin-top: 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--brand-600);
+  border-bottom: 1px solid transparent;
+  transition: border-color 180ms var(--ease);
+}
+
+.search-see-all:hover {
+  border-bottom-color: var(--brand-600);
+}
+
+.search-block + .search-block {
+  margin-top: 20px;
+}
+
+.search-block-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.search-clear {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-500);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.search-clear:hover {
+  color: var(--brand-600);
+}
+
+.search-recents {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.search-recent {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 7px 8px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--ink-700);
+  text-align: left;
+  transition: background-color 160ms var(--ease);
+}
+
+.search-recent:hover {
+  background: var(--cream-100);
+  color: var(--ink-900);
+}
+
+.search-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Doubled class: components.css `.chip` is injected after this sheet. */
+.chip.search-chip {
+  font-size: 12.5px;
+  padding: 6px 14px;
+}
+
+@media (max-width: 720px) {
+  .search-panes {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .btn.search-bar-submit {
+    display: none;
+  }
+
+  .search-results {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==========================================================================
+   Bottom tab bar (mobile)
+   ========================================================================== */
+
+.tabbar {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 800;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    align-items: stretch;
+    height: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    background: rgba(253, 251, 247, 0.97);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-top: 1px solid rgba(185, 178, 169, 0.45);
+    box-shadow: 0 -6px 24px rgba(26, 23, 20, 0.07);
+  }
+}
+
+.tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: var(--ink-500);
+  transition: color 160ms var(--ease);
+  min-width: 0;
+}
+
+.tab--active {
+  color: var(--brand-600);
+}
+
+.tab-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  line-height: 1;
+}
+
+.tab-icon {
+  position: relative;
+  display: inline-flex;
+}
+
+.tab-badge {
+  position: absolute;
+  top: -5px;
+  right: -9px;
+  background: var(--brand-600);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  border-radius: var(--radius-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 4px;
+}
+
+/* Elevated brand-orange search circle. */
+.tab--fab {
+  color: var(--ink-500);
+}
+
+.tab-fab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin-top: -22px;
+  border-radius: 50%;
+  background: var(--brand-600);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(234, 122, 18, 0.38);
+  transition: transform 200ms var(--ease);
+}
+
+.tab--fab:active .tab-fab {
+  transform: scale(0.94);
+}
+
+.tabbar[data-hidden='true'] {
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-accordion-caret,
+  .tab-fab,
+  .search-result,
+  .search-recent {
+    transition: none;
+  }
+}

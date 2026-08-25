@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+coverage/
+.expo/
+.turbo/
+apps/api/prisma/dev.db
+
+# Service-account private keys — never commit
+secrets/
+apps/api/secrets/
+*firebase-adminsdk*.json

@@ -1,0 +1,174 @@
+.site-footer {
+  background: var(--ink-900);
+  color: rgba(253, 251, 247, 0.82);
+  margin-top: 80px;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1.2fr;
+  gap: 48px;
+  padding-block: 64px 48px;
+}
+
+.footer-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.footer-logo .logo-mark {
+  border-radius: 6px;
+}
+
+.footer-logo .logo-word {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 26px;
+  letter-spacing: 0.18em;
+  color: var(--cream-50);
+}
+
+.footer-wordmark {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 26px;
+  letter-spacing: 0.18em;
+  color: var(--cream-50);
+}
+
+.footer-wordmark span {
+  color: var(--brand-500);
+}
+
+.footer-heritage {
+  color: var(--gold-500);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  margin: 10px 0 16px;
+}
+
+.footer-story {
+  font-size: 14px;
+  line-height: 1.7;
+  max-width: 380px;
+  color: rgba(253, 251, 247, 0.62);
+}
+
+.footer-col h3 {
+  color: var(--cream-50);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+}
+
+.footer-col ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 14px;
+}
+
+.footer-col a {
+  color: rgba(253, 251, 247, 0.75);
+  transition: color 160ms var(--ease);
+}
+
+.footer-col a:hover {
+  color: var(--brand-500);
+}
+
+.footer-col address {
+  font-style: normal;
+  color: rgba(253, 251, 247, 0.62);
+  line-height: 1.6;
+}
+
+.footer-bottom {
+  border-top: 1px solid rgba(253, 251, 247, 0.12);
+  padding-block: 20px;
+}
+
+.footer-bottom-inner {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: rgba(253, 251, 247, 0.5);
+}
+
+.footer-since {
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--gold-500);
+}
+
+@media (max-width: 900px) {
+  .footer-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 36px;
+  }
+}
+
+@media (max-width: 560px) {
+  .footer-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---- Atelier additions: hairline, ghost wordmark ---- */
+
+.site-footer {
+  position: relative;
+  overflow: hidden;
+}
+
+.footer-hairline {
+  display: block;
+  height: 1px;
+  width: 100%;
+  background: linear-gradient(90deg, transparent, var(--gold-500), transparent);
+  transform-origin: center;
+}
+
+.footer-brand {
+  max-width: 22rem;
+}
+
+/* Oversized ghost wordmark that rises into view along the footer floor. */
+.footer-ghost-wrap {
+  position: relative;
+  margin-top: clamp(24px, 5vw, 56px);
+  overflow: hidden;
+  pointer-events: none;
+  line-height: 0;
+}
+
+.footer-ghost {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(4rem, 15vw, 15rem);
+  line-height: 0.82;
+  letter-spacing: 0.02em;
+  text-align: center;
+  white-space: nowrap;
+  color: rgba(253, 251, 247, 0.11);
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .footer-hairline,
+  .footer-ghost {
+    transform: none !important;
+  }
+}

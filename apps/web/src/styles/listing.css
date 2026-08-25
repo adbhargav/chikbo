@@ -1,0 +1,353 @@
+/* ==========================================================================
+   PLP — dense marketplace listing: filter sidebar (accordions + reset),
+   applied-filter chips, title + count header, right-aligned sort, dense grid.
+   ========================================================================== */
+
+.listing-header {
+  margin-bottom: 8px;
+}
+
+.listing-header .breadcrumbs {
+  margin-bottom: 12px;
+}
+
+.subcat-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
+/* ---- Header: title + count, sort on the right ---- */
+
+.plp-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-block: 12px 14px;
+  border-bottom: var(--border-soft);
+  margin-bottom: 16px;
+}
+
+.plp-headline {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.plp-title {
+  font-size: clamp(22px, 2.8vw, 32px);
+  line-height: 1.15;
+  margin: 0;
+}
+
+.plp-count {
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.plp-tools {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+}
+
+.sort-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+
+.sort-label .select {
+  width: auto;
+  padding: 8px 12px;
+  font-size: 14px;
+}
+
+.listing-filter-toggle {
+  display: none;
+}
+
+/* ---- Applied filter chips ---- */
+
+.applied-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.applied-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-pill);
+  border: 1px solid rgba(234, 122, 18, 0.4);
+  background: var(--brand-50);
+  color: var(--brand-700);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 5px 12px;
+  transition: background-color 160ms var(--ease), border-color 160ms var(--ease);
+}
+
+.applied-chip:hover {
+  background: #fde8d1;
+  border-color: var(--brand-600);
+}
+
+.applied-clear {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-500);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.applied-clear:hover {
+  color: var(--ink-900);
+}
+
+/* ---- Body grid: sidebar + products ---- */
+
+.listing-body {
+  display: grid;
+  grid-template-columns: 236px minmax(0, 1fr);
+  gap: 32px;
+  align-items: start;
+}
+
+.listing-side {
+  position: sticky;
+  top: 96px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-right: 4px;
+}
+
+/* ---- Filters ---- */
+
+.filters-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+}
+
+.filters-head h2 {
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-500);
+}
+
+.filters-clear {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--brand-600);
+}
+
+.filters-clear:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.filters-clear:disabled {
+  color: var(--ink-300);
+  cursor: not-allowed;
+}
+
+.acc-item--filter {
+  border-top: 1px solid rgba(185, 178, 169, 0.35);
+  border-bottom: none;
+}
+
+.acc-item--filter .acc-trigger {
+  padding: 13px 2px;
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.acc-item--filter .accordion-body {
+  padding: 0 2px 16px;
+}
+
+.acc-trigger-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.acc-hint {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding-inline: 5px;
+  border-radius: var(--radius-pill);
+  background: var(--brand-600);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-ui);
+}
+
+.filter-links,
+.filter-options {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.filter-link {
+  display: block;
+  padding: 5px 8px;
+  margin-left: -8px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: var(--ink-700);
+  transition: background-color 150ms var(--ease), color 150ms var(--ease);
+}
+
+.filter-link:hover {
+  background: var(--cream-100);
+  color: var(--ink-900);
+}
+
+.filter-link--active {
+  color: var(--brand-600);
+  font-weight: 600;
+}
+
+.filter-options .check-row {
+  margin-top: 4px;
+  font-size: 13.5px;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 2px;
+}
+
+.filter-chips .chip {
+  padding: 5px 11px;
+  font-size: 12.5px;
+}
+
+.filter-chips .chip--swatch {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.filter-chips .chip-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.filter-chips .chip-dot--light {
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+}
+
+.price-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.price-form .input {
+  padding: 7px 9px;
+  font-size: 13.5px;
+  min-width: 0;
+}
+
+.price-form .btn {
+  padding: 7px 14px;
+  font-size: 13px;
+}
+
+/* ---- Dense product grid: 2-up mobile, 3-up ≥900, 4-up ≥1200 ---- */
+
+.listing .product-grid--dense {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 26px 14px;
+}
+
+@media (min-width: 900px) {
+  .listing .product-grid--dense {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 30px 18px;
+  }
+}
+
+@media (min-width: 1200px) {
+  .listing .product-grid--dense {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* ---- Mobile: filters collapse behind a toggle ---- */
+
+@media (max-width: 1000px) {
+  .listing-body {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+
+  .listing-filter-toggle {
+    display: inline-flex;
+  }
+
+  .listing-side {
+    display: none;
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .listing-side--open {
+    display: block;
+    margin-bottom: 24px;
+    background: #fff;
+    border: var(--border-soft);
+    border-radius: var(--radius-card);
+    padding: 16px 18px;
+  }
+}
+
+@media (max-width: 560px) {
+  .plp-head {
+    align-items: flex-start;
+  }
+
+  .plp-tools {
+    width: 100%;
+    justify-content: space-between;
+    margin-left: 0;
+  }
+}

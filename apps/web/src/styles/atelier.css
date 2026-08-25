@@ -1,0 +1,647 @@
+/* ==========================================================================
+   Chikbo — "Atelier" uplift: global atmosphere, SilkArt system, drawer,
+   marquees and motion primitives. Loaded after tokens/components. (Navigation
+   panels live in header.css + nav.css.)
+   ========================================================================== */
+
+/* ---- Selection & scrollbar ---- */
+::selection {
+  background: var(--brand-600);
+  color: var(--cream-50);
+}
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-700) var(--cream-100);
+}
+
+body::-webkit-scrollbar {
+  width: 9px;
+}
+
+body::-webkit-scrollbar-track {
+  background: var(--cream-100);
+}
+
+body::-webkit-scrollbar-thumb {
+  background: var(--ink-700);
+  border-radius: 8px;
+  border: 2px solid var(--cream-100);
+}
+
+/* Lenis housekeeping */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+
+/* ---- Film grain ---- */
+.film-grain {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.035;
+  mix-blend-mode: overlay;
+  pointer-events: none;
+  z-index: 2000;
+}
+
+/* ---- Intro curtain ---- */
+.intro-curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: var(--cream-50);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+}
+
+.intro-line {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(180deg, transparent, rgba(176, 141, 62, 0.5), transparent);
+  transform-origin: top;
+}
+
+.intro-wordmark {
+  display: flex;
+  gap: 0.04em;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(40px, 8vw, 88px);
+  letter-spacing: 0.18em;
+  color: var(--ink-900);
+  overflow: hidden;
+  padding-inline: 0.1em;
+  background: var(--cream-50);
+}
+
+.intro-letter {
+  display: inline-block;
+}
+
+.intro-letter--o {
+  color: var(--brand-600);
+}
+
+.intro-tagline {
+  font-family: var(--font-display);
+  font-style: italic;
+  color: var(--gold-500);
+  font-size: clamp(13px, 1.6vw, 16px);
+  letter-spacing: 0.08em;
+  background: var(--cream-50);
+  padding-inline: 12px;
+}
+
+/* ---- Mask line reveals ---- */
+.mask-lines {
+  display: block;
+}
+
+.mask-line {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.08em;
+  margin-bottom: -0.08em;
+}
+
+.mask-line-inner {
+  display: inline-block;
+  will-change: transform;
+}
+
+/* ---- Magnetic wrapper ---- */
+.magnetic {
+  display: inline-block;
+}
+
+.magnetic--block {
+  display: block;
+}
+
+.magnetic--block > * {
+  width: 100%;
+}
+
+/* ==========================================================================
+   SilkArt — woven silk generated imagery
+   ========================================================================== */
+
+.silk {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.silk-base {
+  position: absolute;
+  inset: -12%;
+  background: linear-gradient(var(--silk-angle, 135deg), var(--silk-a), var(--silk-b));
+}
+
+.silk-weave {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.silk-sheen {
+  position: absolute;
+  inset: -30%;
+  background: radial-gradient(
+    45% 38% at var(--silk-sheen-x, 40%) var(--silk-sheen-y, 30%),
+    rgba(255, 252, 245, 0.34),
+    transparent 70%
+  );
+  animation: silk-drift 8s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@keyframes silk-drift {
+  from {
+    transform: translate3d(calc(var(--silk-drift, 12%) * -1), -4%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(var(--silk-drift, 12%), 5%, 0) scale(1.08);
+  }
+}
+
+.silk-vignette {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(120% 90% at 50% 10%, transparent 55%, rgba(20, 14, 10, 0.18)),
+    linear-gradient(0deg, rgba(20, 14, 10, 0.22), transparent 40%);
+}
+
+.silk-caption {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 12px;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  line-height: 1.35;
+  text-shadow: 0 1px 8px rgba(20, 14, 10, 0.35);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Silk-backed media (image crossfades over the art when it loads) */
+.silk-media {
+  position: relative;
+  overflow: hidden;
+}
+
+.silk-media-art {
+  position: absolute;
+  inset: 0;
+}
+
+.silk-media-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 600ms ease;
+}
+
+.silk-media-img--loaded {
+  opacity: 1;
+}
+
+/* ---- Paisley motifs ---- */
+.paisley {
+  position: absolute;
+  width: 120px;
+  height: 160px;
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+/* ==========================================================================
+   Product card choreography
+   ========================================================================== */
+
+.product-card {
+  position: relative;
+}
+
+.product-card-link {
+  transition: transform 300ms var(--ease);
+}
+
+.product-card:hover .product-card-link,
+.product-card:focus-within .product-card-link {
+  transform: translateY(-4px);
+}
+
+/* Diagonal sheen sweep on hover (shared by cards & tiles) */
+.card-sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: inherit;
+  z-index: 2;
+}
+
+.card-sheen::after {
+  content: '';
+  position: absolute;
+  top: -30%;
+  bottom: -30%;
+  left: -70%;
+  width: 45%;
+  background: linear-gradient(105deg, transparent, rgba(255, 253, 248, 0.4), transparent);
+  transform: translateX(-140%) rotate(8deg);
+  transition: transform 700ms var(--ease);
+}
+
+.product-card:hover .card-sheen::after,
+.edit-tile:hover .card-sheen::after,
+.edit-tile:focus-visible .card-sheen::after {
+  transform: translateX(480%) rotate(8deg);
+}
+
+/* Quick view bar sliding up from the bottom of the tile */
+.card-quickview {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--cream-50);
+  background: rgba(26, 23, 20, 0.78);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  transform: translateY(101%);
+  transition: transform 320ms var(--ease);
+}
+
+.card-quickview .arrow {
+  transition: transform 220ms var(--ease);
+}
+
+.product-card:hover .card-quickview,
+.product-card:focus-within .card-quickview {
+  transform: translateY(0);
+}
+
+.product-card:hover .card-quickview .arrow {
+  transform: translateX(4px);
+}
+
+/* Wishlist heart on cards */
+.card-heart {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 4;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(253, 251, 247, 0.92);
+  border: var(--border-soft);
+  color: var(--ink-700);
+  opacity: 0;
+  transform: translateY(-4px) scale(0.9);
+  transition:
+    opacity 220ms var(--ease),
+    transform 220ms var(--ease),
+    color 160ms var(--ease);
+}
+
+.product-card:hover .card-heart,
+.card-heart:focus-visible,
+.card-heart--on {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.card-heart:hover {
+  color: var(--brand-600);
+  transform: scale(1.08);
+}
+
+.card-heart--on {
+  color: var(--brand-600);
+  border-color: rgba(234, 122, 18, 0.5);
+  background: var(--brand-50);
+}
+
+@media (hover: none) {
+  .card-heart {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Heart particle burst */
+.heart-burst {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.heart-burst-dot {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--gold-500);
+}
+
+/* ==========================================================================
+   Cart drawer
+   ========================================================================== */
+
+.drawer-root {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+}
+
+.drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(26, 23, 20, 0.35);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.drawer-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(420px, 94vw);
+  background: var(--cream-50);
+  border-left: 1px solid rgba(185, 178, 169, 0.35);
+  box-shadow: -24px 0 60px rgba(26, 23, 20, 0.18);
+  display: flex;
+  flex-direction: column;
+  will-change: transform;
+}
+
+.drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  border-bottom: var(--border-soft);
+}
+
+.drawer-title {
+  font-size: 21px;
+}
+
+.drawer-count {
+  color: var(--gold-500);
+  font-size: 16px;
+}
+
+.drawer-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  padding: 32px;
+}
+
+.drawer-empty-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--ink-900);
+}
+
+.drawer-lines {
+  list-style: none;
+  padding: 8px 24px;
+  margin: 0;
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.drawer-line {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(185, 178, 169, 0.25);
+}
+
+.drawer-line-media {
+  display: block;
+  aspect-ratio: 3 / 4;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--cream-100);
+  border: var(--border-soft);
+}
+
+.drawer-line-img,
+.drawer-line-media .img-fallback {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.drawer-line-media .img-fallback-name {
+  display: none;
+}
+
+.drawer-line-media .img-fallback-mono {
+  font-size: 18px;
+}
+
+.drawer-line-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink-900);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.drawer-line-name:hover {
+  color: var(--brand-600);
+}
+
+.drawer-line-variant {
+  font-size: 12.5px;
+  margin-top: 2px;
+}
+
+.drawer-line-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.drawer-line-row .qty-stepper button {
+  width: 28px;
+  height: 28px;
+  font-size: 15px;
+}
+
+.drawer-line-row .qty-stepper span {
+  min-width: 26px;
+  font-size: 14px;
+}
+
+.drawer-line-price {
+  font-size: 14px;
+}
+
+.drawer-line-remove {
+  align-self: start;
+  width: 32px;
+  height: 32px;
+  color: var(--ink-500);
+}
+
+.drawer-line-remove:hover {
+  color: var(--error);
+}
+
+.drawer-foot {
+  padding: 16px 24px 22px;
+  border-top: var(--border-soft);
+  background: var(--cream-50);
+}
+
+.drawer-foot .shipbar {
+  margin: 4px 0 14px;
+}
+
+.drawer-subtotal {
+  display: flex;
+  justify-content: space-between;
+  font-weight: 600;
+  color: var(--ink-900);
+  font-size: 16px;
+  margin-bottom: 4px;
+}
+
+.drawer-note {
+  font-size: 12.5px;
+  margin-bottom: 14px;
+}
+
+.drawer-view-cart {
+  margin-top: 8px;
+}
+
+/* ==========================================================================
+   Announcement marquee (header utility bar)
+   ========================================================================== */
+
+.marquee {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.marquee-track {
+  display: inline-flex;
+  animation: marquee-scroll 28s linear infinite;
+  will-change: transform;
+}
+
+.marquee:hover .marquee-track {
+  animation-play-state: paused;
+}
+
+.marquee-copy {
+  display: inline-flex;
+}
+
+.marquee-item {
+  display: inline-flex;
+  align-items: center;
+}
+
+.marquee-dot {
+  margin-inline: 18px;
+  color: var(--gold-500);
+}
+
+@keyframes marquee-scroll {
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track {
+    animation: none;
+  }
+
+  .silk-sheen {
+    animation: none;
+  }
+
+  .film-grain {
+    display: none;
+  }
+}
+
+/* ---- Warm skeleton tint ---- */
+.skeleton::after {
+  background: linear-gradient(90deg, transparent, rgba(255, 248, 236, 0.75), transparent);
+}
+
+/* ---- Focus: gold-kissed inputs ---- */
+.input:focus,
+.select:focus,
+.textarea:focus {
+  border-color: var(--gold-500);
+  box-shadow:
+    0 1px 0 0 var(--gold-500),
+    0 0 0 3px rgba(176, 141, 62, 0.15);
+}

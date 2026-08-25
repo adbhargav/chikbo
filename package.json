@@ -1,0 +1,25 @@
+{
+  "name": "chikbo",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Chikbo — Trust, Quality and Budget friendly. E-commerce platform (web, mobile, API, admin).",
+  "workspaces": [
+    "packages/*",
+    "apps/api",
+    "apps/web",
+    "apps/admin"
+  ],
+  "scripts": {
+    "dev:api": "npm run dev --workspace apps/api",
+    "dev:web": "npm run dev --workspace apps/web",
+    "dev:admin": "npm run dev --workspace apps/admin",
+    "build": "npm run build --workspace packages/shared --workspace apps/api --workspace apps/web --workspace apps/admin",
+    "test": "npm run test --workspace apps/api",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "prisma:migrate": "npm run prisma:migrate --workspace apps/api",
+    "prisma:seed": "npm run prisma:seed --workspace apps/api"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

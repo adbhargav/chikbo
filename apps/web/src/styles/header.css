@@ -1,0 +1,559 @@
+/* ==========================================================================
+   Chikbo — site header
+   Announcement marquee, main bar, centred category nav with overflow "More",
+   the hover mega menu and the quick-link strip.
+   ========================================================================== */
+
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.utility-bar {
+  background: var(--ink-900);
+  color: var(--cream-50);
+  text-align: center;
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
+  padding: 7px 16px;
+}
+
+.utility-gold {
+  color: var(--gold-500);
+  font-weight: 600;
+}
+
+/* The mega menu anchors to this wrapper, so it always drops below whatever
+   part of the header is currently showing. */
+.header-body {
+  position: relative;
+}
+
+.main-bar {
+  background: rgba(253, 251, 247, 0.92);
+  border-bottom: 1px solid rgba(185, 178, 169, 0.3);
+  transition: box-shadow 220ms var(--ease), backdrop-filter 220ms var(--ease);
+}
+
+.site-header--scrolled .main-bar {
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 24px rgba(26, 23, 20, 0.06);
+}
+
+.main-bar-inner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 68px;
+  transition: height 260ms var(--ease);
+}
+
+.site-header--scrolled .main-bar-inner {
+  height: 60px;
+}
+
+.wordmark {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 24px;
+  letter-spacing: 0.18em;
+  color: var(--ink-900);
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: font-size 260ms var(--ease);
+}
+
+.site-header--scrolled .wordmark {
+  font-size: 21px;
+}
+
+.wordmark--sm {
+  font-size: 19px;
+}
+
+.wordmark-o {
+  color: var(--brand-600);
+}
+
+/* --------------------------------------------------------- Centred main nav */
+
+.main-nav {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.main-nav-item {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.main-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  font-size: 14.5px;
+  font-weight: 500;
+  color: var(--ink-700);
+  border-radius: var(--radius-pill);
+  transition: color 160ms var(--ease), background-color 160ms var(--ease);
+  white-space: nowrap;
+}
+
+.main-nav-link:hover,
+.main-nav-link--open {
+  color: var(--ink-900);
+  background: var(--cream-100);
+}
+
+.main-nav-link--active {
+  color: var(--brand-600);
+  font-weight: 600;
+}
+
+.main-nav-link--accent {
+  color: var(--gold-500);
+  font-weight: 600;
+}
+
+.main-nav-link--accent:hover {
+  color: var(--brand-600);
+}
+
+/* Disclosure caret — the keyboard route into the mega menu. */
+.main-nav-caret {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 26px;
+  margin-left: -8px;
+  color: var(--ink-500);
+  border-radius: 6px;
+  transition: color 160ms var(--ease), transform 220ms var(--ease);
+}
+
+.main-nav-caret:hover {
+  color: var(--ink-900);
+}
+
+.main-nav-caret.is-open {
+  color: var(--brand-600);
+  transform: rotate(180deg);
+}
+
+.main-nav-caret-icon {
+  display: inline-flex;
+  color: var(--ink-500);
+}
+
+.main-nav-more {
+  cursor: pointer;
+}
+
+/* Off-screen measuring row: it decides how many items fit before "More".
+   The outer box clips the row so it can never widen the document. */
+.main-nav-ghost {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.main-nav-ghost-row {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: max-content;
+  white-space: nowrap;
+}
+
+/* ----------------------------------------------------------- Header actions */
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+
+.cart-badge {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  background: var(--brand-600);
+  color: #fff;
+  font-size: 10.5px;
+  font-weight: 700;
+  min-width: 17px;
+  height: 17px;
+  border-radius: var(--radius-pill);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: 4px;
+}
+
+/* Doubled class: tokens.css `.icon-btn` is injected after this sheet. */
+.icon-btn.nav-hamburger {
+  display: none;
+  flex: none;
+}
+
+/* ------------------------------------------------------- Quick-link strip */
+
+.quick-strip {
+  background: var(--cream-100);
+  border-bottom: 1px solid rgba(185, 178, 169, 0.3);
+  overflow: hidden;
+  max-height: 52px;
+  opacity: 1;
+  transition: max-height 280ms var(--ease), opacity 200ms var(--ease);
+}
+
+.quick-strip-inner {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0;
+}
+
+.quick-link {
+  position: relative;
+  padding: 13px 26px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-700);
+  white-space: nowrap;
+  transition: color 160ms var(--ease);
+}
+
+.quick-link + .quick-link::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1px;
+  height: 15px;
+  background: rgba(185, 178, 169, 0.7);
+}
+
+.quick-link:hover {
+  color: var(--brand-600);
+}
+
+.quick-link--accent {
+  color: var(--gold-500);
+}
+
+.quick-link--active {
+  color: var(--brand-600);
+}
+
+.quick-link--active::after {
+  content: '';
+  position: absolute;
+  left: 26px;
+  right: 26px;
+  bottom: 6px;
+  height: 1.5px;
+  background: var(--brand-600);
+  border-radius: 2px;
+}
+
+/* ---------------------------------------------------------------- Mega menu */
+
+.mega {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  background: rgba(253, 251, 247, 0.98);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(185, 178, 169, 0.35);
+  box-shadow: 0 32px 60px rgba(26, 23, 20, 0.12);
+  z-index: 90;
+  max-height: calc(100vh - 150px);
+  overflow-y: auto;
+}
+
+.mega-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 44px;
+  padding-block: 28px 34px;
+  align-items: start;
+}
+
+/* The "More" panel has no editorial tile — it uses the full width. */
+.mega-body--wide {
+  grid-column: 1 / -1;
+}
+
+.mega-eyebrow {
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold-500);
+  margin-bottom: 14px;
+}
+
+.mega-cols {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 40px;
+  align-items: flex-start;
+}
+
+.mega-col {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 160px;
+  min-width: 150px;
+  max-width: 260px;
+}
+
+.mega-link {
+  display: inline-block;
+  padding: 6px 0;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--ink-700);
+  transition: color 180ms var(--ease), transform 240ms var(--ease);
+}
+
+.mega-link:hover {
+  color: var(--brand-600);
+  transform: translateX(7px);
+}
+
+.mega-empty {
+  font-size: 14px;
+}
+
+/* "More" panel: one column per overflowed category. */
+.mega-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px 40px;
+}
+
+.mega-group {
+  flex: 1 1 180px;
+  min-width: 165px;
+  max-width: 240px;
+}
+
+.mega-group-head {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 16.5px;
+  font-weight: 600;
+  color: var(--ink-900);
+  margin-bottom: 6px;
+  transition: color 160ms var(--ease);
+}
+
+.mega-group-head:hover {
+  color: var(--brand-600);
+}
+
+.mega-col--compact {
+  max-width: none;
+  min-width: 0;
+}
+
+.mega-link--sm {
+  font-family: var(--font-ui);
+  font-size: 13.5px;
+  padding: 3px 0;
+  color: var(--ink-500);
+}
+
+.mega-link--sm:hover {
+  transform: translateX(5px);
+}
+
+.mega-tile {
+  position: relative;
+  display: block;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+}
+
+.mega-art {
+  position: absolute;
+  inset: 0;
+  transition: transform 700ms var(--ease);
+}
+
+.mega-tile:hover .mega-art {
+  transform: scale(1.05);
+}
+
+.mega-shop {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 14px;
+  z-index: 2;
+  color: var(--cream-50);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 10px rgba(20, 14, 10, 0.5);
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.mega-arrow {
+  transition: transform 220ms var(--ease);
+}
+
+.mega-tile:hover .mega-arrow {
+  transform: translateX(5px);
+}
+
+/* --------------------------------------- Mobile full-width search field row */
+
+.mobile-search-row {
+  display: none;
+  background: var(--cream-50);
+  padding-block: 9px 10px;
+  border-bottom: 1px solid rgba(185, 178, 169, 0.3);
+}
+
+.mobile-search {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border: 1px solid var(--ink-300);
+  border-radius: var(--radius-pill);
+  padding: 10px 16px;
+  color: var(--ink-500);
+  font-size: 14px;
+  text-align: left;
+}
+
+.mobile-search span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------- Breakpoints */
+
+@media (min-width: 901px) {
+  /* The strip only folds away on desktop, where vertical space is scarce
+     once the mega menu and sticky bar are both in play. */
+  .quick-strip[data-hidden='true'] {
+    max-height: 0;
+    opacity: 0;
+    border-bottom-color: transparent;
+  }
+}
+
+@media (max-width: 900px) {
+  .main-nav,
+  .mega {
+    display: none;
+  }
+
+  .mobile-search-row {
+    display: block;
+  }
+
+  .icon-btn.nav-hamburger {
+    display: inline-flex;
+  }
+
+  .icon-btn.header-action--desk {
+    display: none;
+  }
+
+  .main-bar-inner {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    height: 56px;
+    gap: 8px;
+  }
+
+  .site-header--scrolled .main-bar-inner {
+    height: 54px;
+  }
+
+  .wordmark,
+  .site-header--scrolled .wordmark {
+    font-size: 19px;
+    justify-self: center;
+  }
+
+  .quick-strip-inner {
+    justify-content: flex-start;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .quick-strip-inner::-webkit-scrollbar {
+    display: none;
+  }
+
+  .quick-link {
+    padding: 11px 16px;
+    font-size: 11.5px;
+    letter-spacing: 0.1em;
+  }
+
+  .quick-link--active::after {
+    left: 16px;
+    right: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quick-strip,
+  .main-bar-inner,
+  .wordmark,
+  .mega-art,
+  .mega-link,
+  .main-nav-caret {
+    transition: none;
+  }
+
+  .mega-link:hover,
+  .mega-link--sm:hover {
+    transform: none;
+  }
+
+  .mega-tile:hover .mega-art {
+    transform: none;
+  }
+}

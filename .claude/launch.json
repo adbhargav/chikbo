@@ -1,0 +1,29 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--workspace", "apps/web"],
+      "port": 5173,
+      "autoPort": true,
+      "env": { "VITE_PROXY_TARGET": "http://localhost:4100" }
+    },
+    {
+      "name": "web-api4101",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--workspace", "apps/web"],
+      "port": 5173,
+      "autoPort": true,
+      "env": { "VITE_PROXY_TARGET": "http://localhost:4101" }
+    },
+    {
+      "name": "admin",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--workspace", "apps/admin"],
+      "port": 5174,
+      "autoPort": true,
+      "env": { "VITE_PROXY_TARGET": "http://localhost:4100" }
+    }
+  ]
+}

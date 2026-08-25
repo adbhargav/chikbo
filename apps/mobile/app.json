@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "Chikbo",
+    "slug": "chikbo",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "backgroundColor": "#FDFBF7",
+    "splash": {
+      "backgroundColor": "#FDFBF7",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "in.chikbo.app"
+    },
+    "android": {
+      "package": "in.chikbo.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#FDFBF7",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#FDFBF7"
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#EA7A12"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Chikbo needs photo access so you can attach damage photos to return requests."
+        }
+      ]
+    ],
+    "extra": {
+      "apiUrl": "http://localhost:4000/api/v1"
+    }
+  }
+}
