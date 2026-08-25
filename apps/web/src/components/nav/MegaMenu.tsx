@@ -63,6 +63,7 @@ export function MegaMenu({ id, target, onClose, onNavigate, onPointerEnter, onPo
       id={id}
       ref={panelRef}
       className="mega"
+      data-lenis-prevent
       role="region"
       aria-label={`${label} menu`}
       initial={{ opacity: 0, y: ok ? 6 : 0 }}

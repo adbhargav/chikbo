@@ -437,7 +437,9 @@ export function ProductListing({ category, search, title, emptyTitle }: Props) {
       )}
 
       <div className="listing-body">
-        <aside className={`listing-side${filtersOpen ? ' listing-side--open' : ''}`}>{filters}</aside>
+        <aside className={`listing-side${filtersOpen ? ' listing-side--open' : ''}`} data-lenis-prevent>
+          {filters}
+        </aside>
 
         <div className="listing-main">
           {query.isPending && (

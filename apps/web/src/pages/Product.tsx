@@ -461,7 +461,7 @@ export default function Product() {
         {/* ---- Gallery: vertical thumb strip beside the main image ---- */}
         <div className="gallery">
           {images.length > 1 && (
-            <div className="gallery-thumbs" role="group" aria-label="Product images">
+            <div className="gallery-thumbs" role="group" aria-label="Product images" data-lenis-prevent>
               {images.map((img, i) => (
                 <button
                   key={img.id}

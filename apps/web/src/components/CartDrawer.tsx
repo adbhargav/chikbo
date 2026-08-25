@@ -155,7 +155,7 @@ export function CartDrawer() {
               </div>
             ) : (
               <>
-                <ul className="drawer-lines">
+                <ul className="drawer-lines" data-lenis-prevent>
                   {cart.items.map((item, i) => (
                     <motion.li
                       key={item.id}

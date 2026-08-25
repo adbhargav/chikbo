@@ -115,6 +115,7 @@ export function SearchOverlay({ categories }: Props) {
           <motion.div
             ref={panelRef}
             className="search-overlay"
+            data-lenis-prevent
             role="dialog"
             aria-modal="true"
             aria-label="Search products"

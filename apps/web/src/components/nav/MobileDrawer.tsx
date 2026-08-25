@@ -74,7 +74,9 @@ export function MobileDrawer({ categories }: Props) {
               </button>
             </header>
 
-            <div className="nav-drawer-scroll">
+            {/* data-lenis-prevent: without it the stopped Lenis instance swallows
+                wheel/touch events and this inner area cannot scroll. */}
+            <div className="nav-drawer-scroll" data-lenis-prevent>
               <button type="button" className="nav-drawer-search" onClick={openSearch}>
                 <SearchIcon size={18} />
                 <span>Search sarees, dresses, jewellery…</span>
