@@ -9,7 +9,6 @@
     "apps/web",
     "apps/admin"
   ],
-
   
   "scripts": {
     "dev:api": "npm run dev --workspace apps/api",
