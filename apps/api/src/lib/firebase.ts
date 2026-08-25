@@ -18,29 +18,41 @@ import { ApiError } from '../middleware/error';
 import { logger } from './logger';
 
 let app: App | null = null;
-let projectId: string | null | undefined;
+let serviceAccount: Record<string, unknown> | null | undefined;
 
-/** The Firebase project id, read once from the service-account file. */
-export function getFirebaseProjectId(): string | null {
-  if (projectId !== undefined) return projectId;
-  projectId = null;
-  if (env.FCM_SERVICE_ACCOUNT_JSON) {
+/**
+ * The service account, read once. FCM_SERVICE_ACCOUNT_JSON is either a path
+ * to the JSON file (local dev) or the JSON itself pasted into the env var
+ * (hosts like Render, where an env value is easier than a secret file).
+ * Never commit the JSON to the repo — it contains a private key.
+ */
+function getServiceAccount(): Record<string, unknown> | null {
+  if (serviceAccount !== undefined) return serviceAccount;
+  serviceAccount = null;
+  const src = env.FCM_SERVICE_ACCOUNT_JSON.trim();
+  if (src) {
     try {
-      const parsed = JSON.parse(readFileSync(env.FCM_SERVICE_ACCOUNT_JSON, 'utf8')) as { project_id?: string };
-      projectId = parsed.project_id ?? null;
+      serviceAccount = JSON.parse(src.startsWith('{') ? src : readFileSync(src, 'utf8')) as Record<string, unknown>;
     } catch (err) {
       logger.error({ err }, 'Failed to read Firebase service account');
     }
   }
-  return projectId;
+  return serviceAccount;
+}
+
+/** The Firebase project id from the service account. */
+export function getFirebaseProjectId(): string | null {
+  const sa = getServiceAccount();
+  return typeof sa?.project_id === 'string' ? sa.project_id : null;
 }
 
 export async function getFirebaseApp(): Promise<App | null> {
   if (app) return app;
-  if (!env.FCM_SERVICE_ACCOUNT_JSON) return null;
+  const sa = getServiceAccount();
+  if (!sa) return null;
   try {
     const { initializeApp, cert, getApps } = await import('firebase-admin/app');
-    app = getApps()[0] ?? initializeApp({ credential: cert(env.FCM_SERVICE_ACCOUNT_JSON) });
+    app = getApps()[0] ?? initializeApp({ credential: cert(sa as Parameters<typeof cert>[0]) });
     return app;
   } catch (err) {
     logger.error({ err }, 'Failed to initialise firebase-admin');
