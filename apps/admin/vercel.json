@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "cd ../.. && npm install",
+  "build": {
+    "env": {
+      "VITE_API_URL": "https://chikbo.onrender.com"
+    }
+  },
+  "buildCommand": "cd ../.. && npm run build --workspace packages/shared && npm run build --workspace apps/admin",
+  "outputDirectory": "dist",
+  "rewrites": [{ "source": "/((?!assets/).*)", "destination": "/index.html" }]
+}
