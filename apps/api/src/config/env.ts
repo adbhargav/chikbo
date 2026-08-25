@@ -61,15 +61,21 @@ export const googleAuthEnabled = Boolean(parsed.data.GOOGLE_CLIENT_ID);
 export const firebaseAuthEnabled = Boolean(
   parsed.data.FCM_SERVICE_ACCOUNT_JSON && parsed.data.FIREBASE_WEB_API_KEY,
 );
+/** Deployed frontends, always allowed regardless of env configuration. */
+const PRODUCTION_ORIGINS = [
+  'https://chikbo-web.vercel.app', // storefront
+  'https://chikbo-admin-seven.vercel.app', // admin panel
+];
+
 /**
- * Allowed browser origins. WEB_APP_URL is always included — the storefront
- * must be able to call its own API even if CORS_ORIGINS forgets it — and
- * trailing slashes are stripped so `https://site.app/` matches the Origin
- * header (which never carries one).
+ * Allowed browser origins. WEB_APP_URL and the known production frontends are
+ * always included — the sites must be able to call their own API even if
+ * CORS_ORIGINS forgets them — and trailing slashes are stripped so
+ * `https://site.app/` matches the Origin header (which never carries one).
  */
 export const corsOrigins = [
   ...new Set(
-    [...env.CORS_ORIGINS.split(','), env.WEB_APP_URL]
+    [...env.CORS_ORIGINS.split(','), env.WEB_APP_URL, ...PRODUCTION_ORIGINS]
       .map((s) => s.trim().replace(/\/+$/, ''))
       .filter(Boolean),
   ),
