@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import type { CategoryDto, ProductListItemDto } from '@chikbo/shared';
 import { useCategories, useFilterFacets, useProducts } from '../lib/queries';
 import { useStaggerVariants } from '../lib/motion';
+import { useScrollLock } from '../lib/nav-ui';
 import { percentOff } from '../lib/format';
 import { swatchFor } from '../lib/colors';
 import { AccordionItem } from './Accordion';
@@ -73,6 +74,9 @@ function productDiscount(product: ProductListItemDto): number {
 export function ProductListing({ category, search, title, emptyTitle }: Props) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [filtersOpen, setFiltersOpen] = useState(false);
+  /** Which group is showing in the mobile filter sheet's right pane. */
+  const [sheetGroup, setSheetGroup] = useState('category');
+  useScrollLock(filtersOpen);
   const stagger = useStaggerVariants(0.05, 18);
   const { data: categories } = useCategories();
   const { data: facets } = useFilterFacets();
@@ -202,6 +206,200 @@ export function ProductListing({ category, search, title, emptyTitle }: Props) {
     : rawItems;
   const trimmed = items.length !== rawItems.length;
   const total = query.data ? (trimmed ? items.length : query.data.total) : 0;
+
+  /* ---- Mobile filter sheet (Myntra-style two-pane overlay) ---- */
+
+  const sheetGroups = [
+    { key: 'category', label: 'Category', badge: 0 },
+    { key: 'size', label: 'Size', badge: sizes ? sizes.split(',').length : 0 },
+    { key: 'colour', label: 'Colour', badge: colors ? colors.split(',').length : 0 },
+    { key: 'price', label: 'Price', badge: minPrice || maxPrice ? 1 : 0 },
+    { key: 'discount', label: 'Discount', badge: discount ? 1 : 0 },
+    { key: 'availability', label: 'Availability', badge: inStock ? 1 : 0 },
+  ];
+
+  const closeSheet = () => setFiltersOpen(false);
+
+  const sheetPane =
+    sheetGroup === 'category' ? (
+      <ul className="filter-links">
+        {categoryLinks.map((cat) => (
+          <li key={cat.id}>
+            <Link
+              to={`/c/${cat.slug}`}
+              className={`filter-link${cat.slug === category ? ' filter-link--active' : ''}`}
+              aria-current={cat.slug === category ? 'page' : undefined}
+              onClick={closeSheet}
+            >
+              {cat.name}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    ) : sheetGroup === 'size' ? (
+      <ul className="filter-options">
+        {sizeOptions.map((size) => (
+          <li key={size}>
+            <label className="check-row">
+              <input
+                type="checkbox"
+                checked={sizes.split(',').includes(size)}
+                onChange={() => update({ sizes: toggleCsv(sizes, size) || null })}
+              />
+              {size}
+            </label>
+          </li>
+        ))}
+      </ul>
+    ) : sheetGroup === 'colour' ? (
+      <ul className="filter-options">
+        {colorOptions.map((color) => {
+          const swatch = swatchFor(color);
+          return (
+            <li key={color}>
+              <label className="check-row">
+                <input
+                  type="checkbox"
+                  checked={colors.split(',').includes(color)}
+                  onChange={() => update({ colors: toggleCsv(colors, color) || null })}
+                />
+                <span
+                  className={`chip-dot${swatch.light ? ' chip-dot--light' : ''}`}
+                  style={{ background: swatch.fill }}
+                  aria-hidden="true"
+                />
+                {color}
+              </label>
+            </li>
+          );
+        })}
+      </ul>
+    ) : sheetGroup === 'price' ? (
+      <>
+        <ul className="filter-options">
+          {PRICE_BANDS.map((band) => {
+            const active = minPrice === band.min && maxPrice === band.max;
+            return (
+              <li key={band.label}>
+                <label className="check-row">
+                  <input
+                    type="checkbox"
+                    checked={active}
+                    onChange={() =>
+                      update(
+                        active
+                          ? { minPrice: null, maxPrice: null }
+                          : { minPrice: band.min || null, maxPrice: band.max || null },
+                      )
+                    }
+                  />
+                  {band.label}
+                </label>
+              </li>
+            );
+          })}
+        </ul>
+        <form className="price-form" onSubmit={applyPrice}>
+          <label className="visually-hidden" htmlFor="sheet-min-price">
+            Minimum price in rupees
+          </label>
+          <input
+            id="sheet-min-price"
+            className="input"
+            type="number"
+            min={0}
+            inputMode="numeric"
+            placeholder="Min"
+            value={priceDraft.min}
+            onChange={(e) => setPriceDraft((d) => ({ ...d, min: e.target.value }))}
+          />
+          <span aria-hidden="true">–</span>
+          <label className="visually-hidden" htmlFor="sheet-max-price">
+            Maximum price in rupees
+          </label>
+          <input
+            id="sheet-max-price"
+            className="input"
+            type="number"
+            min={0}
+            inputMode="numeric"
+            placeholder="Max"
+            value={priceDraft.max}
+            onChange={(e) => setPriceDraft((d) => ({ ...d, max: e.target.value }))}
+          />
+          <button type="submit" className="btn btn-secondary btn-sm">
+            Go
+          </button>
+        </form>
+      </>
+    ) : sheetGroup === 'discount' ? (
+      <ul className="filter-options">
+        {DISCOUNTS.map((value) => (
+          <li key={value}>
+            <label className="check-row">
+              <input
+                type="checkbox"
+                checked={discount === String(value)}
+                onChange={(e) => update({ discount: e.target.checked ? String(value) : null })}
+              />
+              {value}% off or more
+            </label>
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <label className="check-row">
+        <input
+          type="checkbox"
+          checked={inStock}
+          onChange={(e) => update({ inStock: e.target.checked ? 'true' : null })}
+        />
+        In stock only
+      </label>
+    );
+
+  const filterSheet = filtersOpen ? (
+    <div className="filter-sheet" id="listing-filters-sheet" role="dialog" aria-modal="true" aria-label="Filters">
+      <header className="filter-sheet-head">
+        <h2>Filters</h2>
+        <button
+          type="button"
+          className="filter-sheet-clear"
+          onClick={clearFilters}
+          disabled={activeFilterCount === 0}
+        >
+          Clear all
+        </button>
+      </header>
+      <div className="filter-sheet-body">
+        <nav className="filter-sheet-rail" aria-label="Filter groups" data-lenis-prevent>
+          {sheetGroups.map((group) => (
+            <button
+              key={group.key}
+              type="button"
+              className={`filter-rail-item${sheetGroup === group.key ? ' is-active' : ''}`}
+              aria-pressed={sheetGroup === group.key}
+              onClick={() => setSheetGroup(group.key)}
+            >
+              {group.label}
+              {group.badge > 0 && <span className="filter-rail-badge">{group.badge}</span>}
+            </button>
+          ))}
+        </nav>
+        <div className="filter-sheet-pane" data-lenis-prevent>
+          {sheetPane}
+        </div>
+      </div>
+      <footer className="filter-sheet-foot">
+        <button type="button" className="filter-sheet-close" onClick={closeSheet}>
+          Close
+        </button>
+        <button type="button" className="filter-sheet-apply" onClick={closeSheet}>
+          Apply{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+        </button>
+      </footer>
+    </div>
+  ) : null;
 
   const filters = (
     <div className="filters" id="listing-filters">
@@ -437,7 +635,7 @@ export function ProductListing({ category, search, title, emptyTitle }: Props) {
       )}
 
       <div className="listing-body">
-        <aside className={`listing-side${filtersOpen ? ' listing-side--open' : ''}`} data-lenis-prevent>
+        <aside className="listing-side" data-lenis-prevent>
           {filters}
         </aside>
 
@@ -492,6 +690,8 @@ export function ProductListing({ category, search, title, emptyTitle }: Props) {
           )}
         </div>
       </div>
+
+      {filterSheet}
     </div>
   );
 }

@@ -311,7 +311,7 @@
   }
 }
 
-/* ---- Mobile: filters collapse behind a toggle ---- */
+/* ---- Mobile: filters open in a full-screen two-pane sheet ---- */
 
 @media (max-width: 1000px) {
   .listing-body {
@@ -325,19 +325,170 @@
 
   .listing-side {
     display: none;
-    position: static;
-    max-height: none;
-    overflow: visible;
   }
+}
 
-  .listing-side--open {
-    display: block;
-    margin-bottom: 24px;
-    background: #fff;
-    border: var(--border-soft);
-    border-radius: var(--radius-card);
-    padding: 16px 18px;
+.filter-sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 960;
+  background: var(--cream-50);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Desktop keeps the sidebar; the sheet is a mobile surface. */
+@media (min-width: 1001px) {
+  .filter-sheet {
+    display: none;
   }
+}
+
+.filter-sheet-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: var(--border-soft);
+}
+
+.filter-sheet-head h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-900);
+}
+
+.filter-sheet-clear {
+  background: none;
+  border: none;
+  padding: 4px 0;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--brand-600);
+  cursor: pointer;
+}
+
+.filter-sheet-clear:disabled {
+  color: var(--ink-300);
+  cursor: default;
+}
+
+.filter-sheet-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  min-height: 0;
+}
+
+.filter-sheet-rail {
+  background: rgba(185, 178, 169, 0.16);
+  border-right: var(--border-soft);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-rail-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(185, 178, 169, 0.28);
+  padding: 15px 12px;
+  font-size: 13.5px;
+  color: var(--ink-700, #55504a);
+  cursor: pointer;
+}
+
+.filter-rail-item.is-active {
+  background: var(--cream-50);
+  font-weight: 600;
+  color: var(--ink-900);
+  box-shadow: inset 3px 0 0 var(--brand-600);
+}
+
+.filter-rail-badge {
+  min-width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--brand-600);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 5px;
+}
+
+.filter-sheet-pane {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 6px 16px 24px;
+}
+
+.filter-sheet-pane .check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  margin: 0;
+  font-size: 14px;
+  border-bottom: 1px solid rgba(185, 178, 169, 0.22);
+}
+
+.filter-sheet-pane .chip-dot {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.filter-sheet-pane .filter-links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.filter-sheet-pane .filter-link {
+  display: block;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(185, 178, 169, 0.22);
+  font-size: 14px;
+}
+
+.filter-sheet-foot {
+  flex: none;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: var(--border-soft);
+  background: #fff;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.filter-sheet-foot button {
+  background: none;
+  border: none;
+  padding: 16px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  color: var(--ink-900);
+}
+
+.filter-sheet-apply {
+  color: var(--brand-600) !important;
+  border-left: var(--border-soft) !important;
 }
 
 @media (max-width: 560px) {
