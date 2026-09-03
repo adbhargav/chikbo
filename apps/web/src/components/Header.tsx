@@ -372,7 +372,7 @@ export function Header() {
               <MenuIcon />
             </button>
 
-            <Logo size={32} className="header-logo" />
+            <Logo size={44} className="header-logo" />
 
             <nav className="main-nav" aria-label="Categories" ref={navRef}>
               {visible.map((category, index) => (
