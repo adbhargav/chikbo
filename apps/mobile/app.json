@@ -13,10 +13,12 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "in.chikbo.app"
+      "bundleIdentifier": "in.chikbo.app",
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
       "package": "in.chikbo.app",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#FDFBF7",
         "foregroundImage": "./assets/android-icon-foreground.png",

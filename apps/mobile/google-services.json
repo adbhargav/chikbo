@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "384357089057",
+    "project_id": "chikbo-a7bf4",
+    "storage_bucket": "chikbo-a7bf4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:384357089057:android:0183c9a07262d458cf0860",
+        "android_client_info": {
+          "package_name": "in.chikbo.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "384357089057-p5h350kedes7bnf1qtstner6k5dtepdf.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAY_kco-bnG7F8dkxB1itc6Q05HYsiDiOs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "384357089057-p5h350kedes7bnf1qtstner6k5dtepdf.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
