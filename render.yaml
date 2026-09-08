@@ -2,9 +2,12 @@
 #
 # The frontend deploys separately on Vercel (apps/web/vercel.json); the
 # database is Neon Postgres, already cloud-hosted. Fill the sync:false env
-# vars in the Render dashboard on first deploy, and add the Firebase
-# service-account JSON as a Secret File named firebase-service-account.json
-# (Environment -> Secret Files) — FCM_SERVICE_ACCOUNT_JSON below points at it.
+# vars in the Render dashboard on first deploy.
+#
+# FCM_SERVICE_ACCOUNT_JSON takes either a path to the JSON file — add it under
+# Environment -> Secret Files as firebase-service-account.json, which the
+# default below points at — or the JSON itself pasted straight into the env
+# var, which avoids the Secret Files UI entirely.
 #
 # Note: admin image uploads land on the service's local disk, which is
 # ephemeral on the free plan — they disappear on redeploy. Seeded product
