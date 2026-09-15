@@ -3,7 +3,8 @@ import { razorpay } from '../../lib/razorpay';
 import { env } from '../../config/env';
 import { logger } from '../../lib/logger';
 import { ApiError } from '../../middleware/error';
-import { notifyUser } from '../../lib/notify';
+import { notifyCustomer } from '../../lib/notify';
+import type { CartOwner } from '../../middleware/guest';
 import { orderConfirmedEmail, refundCompletedEmail, refundInitiatedEmail } from '../../lib/emails';
 import { verifyRazorpayPaymentSignature } from '../../utils/signatures';
 
@@ -37,34 +38,34 @@ export async function markPaymentCaptured(params: {
       await tx.orderStatusHistory.create({
         data: { orderId: payment.orderId, status: 'CONFIRMED', note: 'Payment captured' },
       });
-      // Clear purchased items from the cart.
+      // Clear purchased items from the cart that placed the order.
       const items = await tx.orderItem.findMany({ where: { orderId: payment.orderId }, select: { variantId: true } });
-      await tx.cartItem.deleteMany({
-        where: { userId: payment.order.userId, variantId: { in: items.map((i) => i.variantId) } },
-      });
+      const variantIds = items.map((i) => i.variantId);
+      if (payment.order.userId) {
+        await tx.cartItem.deleteMany({ where: { userId: payment.order.userId, variantId: { in: variantIds } } });
+      } else if (payment.order.guestToken) {
+        await tx.cartItem.deleteMany({ where: { guestToken: payment.order.guestToken, variantId: { in: variantIds } } });
+      }
       return payment.order;
     }
     return null;
   });
 
   if (confirmed) {
-    const [user, full] = await Promise.all([
-      prisma.user.findUnique({ where: { id: confirmed.userId } }),
-      prisma.order.findUnique({ where: { id: confirmed.id }, include: { items: true } }),
-    ]);
-    if (user && full) {
-      const mail = orderConfirmedEmail(full, user.name);
-      await notifyUser({
-        userId: user.id,
-        type: 'order_update',
-        title: 'Order confirmed 🎉',
-        body: `Your Chikbo order ${confirmed.orderNumber} is confirmed. We'll start packing it right away!`,
-        data: { orderId: confirmed.id },
-        email: { to: user.email, subject: mail.subject, html: mail.html },
-        whatsapp: user.phone
-          ? { phone: user.phone, message: `Chikbo: your order ${confirmed.orderNumber} is confirmed! Track it in the app.` }
-          : undefined,
-      });
+    const full = await prisma.order.findUnique({ where: { id: confirmed.id }, include: { items: true, user: true } });
+    if (full) {
+      const mail = orderConfirmedEmail(full, full.user?.name ?? full.shipFullName);
+      await notifyCustomer(
+        { userId: full.userId, email: full.user?.email ?? full.guestEmail, phone: full.user?.phone ?? full.shipPhone },
+        {
+          type: 'order_update',
+          title: 'Order confirmed 🎉',
+          body: `Your Chikbo order ${confirmed.orderNumber} is confirmed. We'll start packing it right away!`,
+          data: { orderId: confirmed.id },
+          email: mail,
+          whatsapp: `Chikbo: your order ${confirmed.orderNumber} is confirmed! Track it in the app.`,
+        },
+      );
     }
   }
 }
@@ -88,14 +89,17 @@ export async function markPaymentFailed(params: {
 
 /** Client callback after Razorpay Checkout succeeds: verify HMAC then confirm. */
 export async function verifyAndCapture(
-  userId: string,
+  owner: CartOwner,
   body: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string },
 ): Promise<{ orderId: string; orderNumber: string; status: string }> {
   const payment = await prisma.payment.findUnique({
     where: { razorpayOrderId: body.razorpay_order_id },
     include: { order: true },
   });
-  if (!payment || payment.order.userId !== userId) throw ApiError.notFound('Payment not found');
+  const owned =
+    payment && (owner.userId ? payment.order.userId === owner.userId : payment.order.guestToken === owner.guestToken);
+  if (!payment || !owned) throw ApiError.notFound('Payment not found');
+  const userId = owner.userId ?? null;
 
   const valid = verifyRazorpayPaymentSignature({
     razorpayOrderId: body.razorpay_order_id,
@@ -150,18 +154,18 @@ export async function initiateRefund(orderId: string, amountInPaise: number | un
     // biggest driver of "where is my refund?" support tickets.
     const full = await prisma.order.findUnique({ where: { id: orderId }, include: { items: true, user: true } });
     if (full) {
-      const mail = refundInitiatedEmail(full, full.user.name, amount, reason);
-      await notifyUser({
-        userId: full.userId,
-        type: 'refund_update',
-        title: 'Refund started',
-        body: `We've started a refund of ₹${(amount / 100).toFixed(2)} for order ${full.orderNumber}.`,
-        data: { orderId },
-        email: { to: full.user.email, subject: mail.subject, html: mail.html },
-        whatsapp: full.user.phone
-          ? { phone: full.user.phone, message: `Chikbo: refund of ₹${(amount / 100).toFixed(2)} started for order ${full.orderNumber}. It reaches your account in 5-7 working days.` }
-          : undefined,
-      });
+      const mail = refundInitiatedEmail(full, full.user?.name ?? full.shipFullName, amount, reason);
+      await notifyCustomer(
+        { userId: full.userId, email: full.user?.email ?? full.guestEmail, phone: full.user?.phone ?? full.shipPhone },
+        {
+          type: 'refund_update',
+          title: 'Refund started',
+          body: `We've started a refund of ₹${(amount / 100).toFixed(2)} for order ${full.orderNumber}.`,
+          data: { orderId },
+          email: mail,
+          whatsapp: `Chikbo: refund of ₹${(amount / 100).toFixed(2)} started for order ${full.orderNumber}. It reaches your account in 5-7 working days.`,
+        },
+      );
     }
     return refund.id;
   } catch (err) {
@@ -192,14 +196,16 @@ export async function markRefundProcessed(razorpayRefundId: string): Promise<voi
     include: { items: true, user: true },
   });
   if (full) {
-    const mail = refundCompletedEmail(full, full.user.name);
-    await notifyUser({
-      userId: full.userId,
-      type: 'refund_update',
-      title: 'Refund completed',
-      body: `Your refund for order ${full.orderNumber} has been processed.`,
-      data: { orderId: full.id },
-      email: { to: full.user.email, subject: mail.subject, html: mail.html },
-    });
+    const mail = refundCompletedEmail(full, full.user?.name ?? full.shipFullName);
+    await notifyCustomer(
+      { userId: full.userId, email: full.user?.email ?? full.guestEmail },
+      {
+        type: 'refund_update',
+        title: 'Refund completed',
+        body: `Your refund for order ${full.orderNumber} has been processed.`,
+        data: { orderId: full.id },
+        email: mail,
+      },
+    );
   }
 }

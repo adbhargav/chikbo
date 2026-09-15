@@ -3,7 +3,7 @@ import { prisma } from '../../lib/prisma';
 import { shiprocket } from '../../lib/shiprocket';
 import { logger } from '../../lib/logger';
 import { ApiError } from '../../middleware/error';
-import { notifyUser } from '../../lib/notify';
+import { notifyCustomer } from '../../lib/notify';
 import { orderStatusEmail } from '../../lib/emails';
 
 /** Create a Shiprocket shipment for a paid order (admin action). */
@@ -34,7 +34,7 @@ export async function createShipmentForOrder(orderId: string, actorId: string) {
       city: order.shipCity,
       state: order.shipState,
       pincode: order.shipPincode,
-      email: order.user.email,
+      email: order.user?.email ?? order.guestEmail ?? '',
     },
     items: order.items.map((i) => ({
       name: i.productName,
@@ -148,21 +148,21 @@ export async function syncShipmentFromWebhook(awbCode: string, statusText: strin
       include: { items: true, user: true },
     });
     if (full) {
-      const mail = orderStatusEmail(full, full.user.name, mapped.order, {
+      const mail = orderStatusEmail(full, full.user?.name ?? full.shipFullName, mapped.order, {
         awbCode: shipment.awbCode,
         courierName: shipment.courierName,
       });
-      await notifyUser({
-        userId: full.userId,
-        type: 'order_update',
-        title: msg.title,
-        body: msg.body(full.orderNumber),
-        data: { orderId: shipment.orderId },
-        email: mail ? { to: full.user.email, subject: mail.subject, html: mail.html } : undefined,
-        whatsapp: full.user.phone
-          ? { phone: full.user.phone, message: `${msg.body(full.orderNumber)}${shipment.awbCode ? ` Tracking: ${shipment.awbCode}` : ''}` }
-          : undefined,
-      });
+      await notifyCustomer(
+        { userId: full.userId, email: full.user?.email ?? full.guestEmail, phone: full.user?.phone ?? full.shipPhone },
+        {
+          type: 'order_update',
+          title: msg.title,
+          body: msg.body(full.orderNumber),
+          data: { orderId: shipment.orderId },
+          email: mail,
+          whatsapp: `${msg.body(full.orderNumber)}${shipment.awbCode ? ` Tracking: ${shipment.awbCode}` : ''}`,
+        },
+      );
     }
   }
 }

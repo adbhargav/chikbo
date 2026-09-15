@@ -49,24 +49,40 @@ Password rule: ≥8 chars with a letter and a number. Phone: 10-digit Indian mob
 
 `ProductListItemDto` carries `badge` (`"New"`, `"Bestseller"`, …) for the card's bottom-left flag.
 
-## Cart (auth)
-- `GET /cart?coupon=CODE` → `CartDto` (server prices everything; passing `coupon` validates & prices it — 422 with codes `COUPON_INVALID|COUPON_EXPIRED|COUPON_MIN_ORDER|COUPON_EXHAUSTED|COUPON_ALREADY_USED` when not applicable)
+## Guest sessions
+Browsing, the cart and checkout never require an account. A client that has no
+session identifies itself with an `X-Guest-Token` header: an opaque, URL-safe
+string of 16–128 chars it generates once and keeps (the web app stores a UUID
+in localStorage). A signed-in request ignores the header. After sign-in or
+registration the client calls `POST /orders/claim` to hand the guest session
+over to the account.
+
+## Cart (guest or auth)
+- `GET /cart?coupon=CODE&email=` → `CartDto` (server prices everything; passing `coupon` validates & prices it — 422 with codes `COUPON_INVALID|COUPON_EXPIRED|COUPON_MIN_ORDER|COUPON_EXHAUSTED|COUPON_ALREADY_USED` when not applicable). Guests may pass the `email` they will check out with so the per-customer coupon limit is checked early.
 - `POST /cart/items` `{variantId, qty}` → CartDto (max 10/line, clamped to stock)
 - `PATCH /cart/items/:id` `{qty}` (0 removes) → CartDto
 - `DELETE /cart/items/:id` → CartDto
+- `POST /cart/merge` (auth) `{guestToken}` → `{merged, cart}` — folds a guest cart into the account cart (quantities add up). `POST /orders/claim` does this too.
 
 Shipping: free at/above ₹999 after discount, else ₹79 (constants in shared).
 
 ## Wishlist (auth)
 - `GET /wishlist`, `POST /wishlist/:productId`, `DELETE /wishlist/:productId`
 
-## Checkout & payment (auth)
-1. `POST /checkout` `{addressId, couponCode?, idempotencyKey: <uuid>}` → `CheckoutCreateResponse` `{orderId, orderNumber, razorpayOrderId, razorpayKeyId, amountInPaise, currency, prefill}`. Keep the same idempotencyKey when retrying — the same pending order is returned.
+## Checkout & payment (guest or auth)
+1. `POST /checkout` → `CheckoutCreateResponse` `{orderId, orderNumber, razorpayOrderId, razorpayKeyId, amountInPaise, currency, prefill}`. Keep the same idempotencyKey when retrying — the same pending order is returned.
+   - Signed in: `{addressId, couponCode?, idempotencyKey: <uuid>}` (a saved address), or an inline `address` instead of `addressId`.
+   - Guest (`X-Guest-Token`): `{email, address: {fullName, phone, line1, line2?, city, state, pincode}, couponCode?, idempotencyKey}`. The confirmation email goes to `email`; the order carries no user until it is claimed.
    Errors: 422 `INSUFFICIENT_STOCK`, `PAYMENTS_UNAVAILABLE`, coupon codes above.
 2. Open Razorpay Checkout with `key: razorpayKeyId, order_id: razorpayOrderId, amount, currency`.
 3. On success: `POST /payments/verify` with `{razorpay_order_id, razorpay_payment_id, razorpay_signature}` → `{orderId, orderNumber, status}`.
 4. On failure/dismiss: `POST /payments/failed` `{razorpay_order_id, error_code?, error_description?}`.
    The server also confirms via webhook, so verify failure is non-fatal; poll the order.
+   Both endpoints accept a guest token in place of a session; `verify` only confirms an order the caller placed.
+
+## Guest orders → account
+- `GET /orders/guest/:id` (`X-Guest-Token`) → `OrderDto` — the order-success page reads the order it just placed.
+- `POST /orders/claim` (auth) `{guestToken}` → `{claimedOrders, mergedCartLines}` — every unclaimed order placed with that token becomes the account's (coupon redemptions follow), and the guest cart merges into the account cart. Idempotent. The web app calls this right after any sign-in or registration and then rotates its guest token.
 
 ## Orders (auth)
 - `GET /orders?page&pageSize` → `Paginated<OrderDto>`

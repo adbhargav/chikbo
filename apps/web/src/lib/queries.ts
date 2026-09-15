@@ -82,12 +82,21 @@ export function useReviews(slug: string | undefined, page: number) {
 // Cart
 // ---------------------------------------------------------------------------
 
-export function useCart(coupon?: string | null) {
-  const { user } = useAuth();
+/**
+ * The cart belongs to the signed-in user, or to this browser's guest token —
+ * either way it lives on the server, so it is always fetchable. Guests may pass
+ * the email they'll check out with so coupon limits are checked early.
+ */
+export function useCart(coupon?: string | null, guestEmail?: string | null) {
+  const { user, loading } = useAuth();
   return useQuery({
-    queryKey: ['cart', coupon ?? null],
-    queryFn: () => api<CartDto>('/cart', { query: coupon ? { coupon } : undefined }),
-    enabled: !!user,
+    queryKey: ['cart', coupon ?? null, user ? null : guestEmail ?? null],
+    queryFn: () =>
+      api<CartDto>('/cart', {
+        query: { coupon: coupon || undefined, email: !user && guestEmail ? guestEmail : undefined },
+      }),
+    // Wait for session restore so the first fetch carries the right identity.
+    enabled: !loading,
     retry: (failureCount, error) => {
       // Coupon validation errors (422) should surface immediately, not retry.
       if (coupon) return false;
@@ -198,6 +207,20 @@ export function useOrder(id: string | undefined) {
     queryKey: ['order', id],
     queryFn: () => api<OrderDto>(`/orders/${id}`),
     enabled: !!user && !!id,
+  });
+}
+
+/**
+ * An order as seen from the checkout that placed it: members read their own
+ * order, guests read it through the guest token that placed it.
+ */
+export function useOrderAfterCheckout(id: string | undefined) {
+  const { user, loading } = useAuth();
+  return useQuery({
+    queryKey: ['order', id, user ? 'member' : 'guest'],
+    queryFn: () => api<OrderDto>(user ? `/orders/${id}` : `/orders/guest/${id}`),
+    enabled: !loading && !!id,
+    retry: false,
   });
 }
 

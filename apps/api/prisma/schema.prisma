@@ -336,17 +336,23 @@ model InventoryLog {
 // ---------------------------------------------------------------------------
 
 model CartItem {
-  id        String         @id @default(cuid())
-  userId    String
-  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  variantId String
-  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
-  qty       Int
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  id         String         @id @default(cuid())
+  /// Owner when signed in. Exactly one of userId / guestToken is set.
+  userId     String?
+  user       User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Owner when browsing as a guest: an opaque, client-generated token sent as
+  /// the `X-Guest-Token` header. Merged into the user's cart on sign-in.
+  guestToken String?
+  variantId  String
+  variant    ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  qty        Int
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
 
   @@unique([userId, variantId])
+  @@unique([guestToken, variantId])
   @@index([userId])
+  @@index([guestToken])
 }
 
 model WishlistItem {
@@ -390,16 +396,19 @@ model Coupon {
 }
 
 model CouponRedemption {
-  id        String   @id @default(cuid())
-  couponId  String
-  coupon    Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  orderId   String   @unique
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  couponId   String
+  coupon     Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Guest redemptions are limited per email instead of per account.
+  guestEmail String?
+  orderId    String   @unique
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
 
   @@index([couponId, userId])
+  @@index([couponId, guestEmail])
 }
 
 // ---------------------------------------------------------------------------
@@ -423,8 +432,14 @@ enum OrderStatus {
 model Order {
   id             String      @id @default(cuid())
   orderNumber    String      @unique
-  userId         String
-  user           User        @relation(fields: [userId], references: [id])
+  /// Null for guest checkout until the customer creates an account or signs
+  /// in from the order-success page, which claims the order.
+  userId         String?
+  user           User?       @relation(fields: [userId], references: [id])
+  /// Guest checkout: the cart token that placed the order (proves possession
+  /// from the same browser when claiming) and the email given at checkout.
+  guestToken     String?
+  guestEmail     String?
   status         OrderStatus @default(PENDING)
   /// Client-supplied idempotency key; prevents duplicate order creation.
   idempotencyKey String      @unique
@@ -458,6 +473,8 @@ model Order {
   couponRedemption CouponRedemption?
 
   @@index([userId, createdAt])
+  @@index([guestToken])
+  @@index([guestEmail])
   @@index([status, createdAt])
   @@index([createdAt])
 }

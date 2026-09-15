@@ -143,9 +143,12 @@ export function Orders() {
                       >
                         <td className="primary">{o.orderNumber}</td>
                         <td>
-                          <div>{o.user.name}</div>
+                          <div>
+                            {o.user?.name ?? o.shipFullName}
+                            {!o.user && <span className="muted"> · guest</span>}
+                          </div>
                           <div className="muted" style={{ fontSize: 12 }}>
-                            {o.user.email}
+                            {o.user?.email ?? o.guestEmail ?? '—'}
                           </div>
                         </td>
                         <td className="num">{o.items.reduce((s, i) => s + i.qty, 0)}</td>

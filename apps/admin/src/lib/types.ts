@@ -118,7 +118,9 @@ export interface RecentOrder {
   status: OrderStatus;
   totalInPaise: Paise;
   createdAt: string;
-  user: { name: string };
+  /** Null for a guest order that has not been claimed by an account. */
+  user: { name: string } | null;
+  shipFullName: string;
   items: { qty: number }[];
 }
 
@@ -245,7 +247,10 @@ export interface AdminShipmentRow extends AdminShipment {
 interface AdminOrderBase {
   id: string;
   orderNumber: string;
-  userId: string;
+  /** Null while a guest order is unclaimed. */
+  userId: string | null;
+  /** Contact email given at guest checkout; null for member orders. */
+  guestEmail: string | null;
   status: OrderStatus;
   subtotalInPaise: Paise;
   discountInPaise: Paise;
@@ -266,7 +271,7 @@ interface AdminOrderBase {
 }
 
 export interface AdminOrderListItem extends AdminOrderBase {
-  user: { id: string; name: string; email: string };
+  user: { id: string; name: string; email: string } | null;
   payments: AdminPayment[];
   shipments: AdminShipment[];
 }
@@ -294,7 +299,7 @@ export interface AdminReturnRequest {
 }
 
 export interface AdminOrderDetail extends AdminOrderBase {
-  user: { id: string; name: string; email: string; phone: string | null };
+  user: { id: string; name: string; email: string; phone: string | null } | null;
   payments: AdminPayment[];
   shipments: AdminShipment[];
   statusHistory: OrderStatusHistoryEntry[];
@@ -309,7 +314,7 @@ export interface AdminReturnRow extends AdminReturnRequest {
 }
 
 export interface AdminPaymentRow extends AdminPayment {
-  order: { orderNumber: string; user: { email: string } };
+  order: { orderNumber: string; guestEmail: string | null; user: { email: string } | null };
   refunds: AdminRefund[];
 }
 

@@ -12,7 +12,7 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  usePageTitle('Sign in');
+  usePageTitle('Admin sign in');
 
   const from = (location.state as { from?: string } | null)?.from ?? '/';
 
@@ -36,9 +36,13 @@ export function Login() {
     <div className="login-screen">
       <div className="login-card">
         <div className="login-brand">
-          <img src="/brand/chikbo-logo.png" alt="Chikbo" className="login-mark" style={{ height: 60, width: 'auto', objectFit: 'contain' }} />
-          <div className="heritage">Staff Console · Since 1992</div>
+          <img src={`${import.meta.env.BASE_URL}brand/chikbo-logo.png`} alt="Chikbo" className="login-mark" style={{ height: 60, width: 'auto', objectFit: 'contain' }} />
+          <div className="heritage">Admin Console · Since 1992</div>
         </div>
+        <h1 className="login-title">Admin sign in</h1>
+        <p className="muted login-sub">
+          For Chikbo staff. Customers sign in on the storefront.
+        </p>
         {error && (
           <div className="login-error" role="alert">
             {error}

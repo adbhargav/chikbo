@@ -30,7 +30,7 @@ import { PincodeChecker } from '../components/PincodeChecker';
 import { AccordionItem } from '../components/Accordion';
 import { RatingStars } from '../components/RatingStars';
 import { Breadcrumbs, ErrorState, JsonLd, Pagination, QtyStepper } from '../components/ui';
-import { CheckIcon, HeartIcon, LockIcon, ShieldIcon, TruckIcon } from '../components/icons';
+import { CheckIcon, HeartIcon, LockIcon, ShareIcon, ShieldIcon, TruckIcon } from '../components/icons';
 import '../styles/product.css';
 
 function uniq(values: (string | null)[]): string[] {
@@ -390,7 +390,7 @@ export default function Product() {
   };
 
   const addToCart = () => {
-    if (!requireAuth() || !selected) return;
+    if (!selected) return;
     addItem.mutate(
       { variantId: selected.id, qty },
       {
@@ -405,6 +405,28 @@ export default function Product() {
           toast.show(err instanceof ApiError ? err.message : 'Could not add to bag.', 'error'),
       },
     );
+  };
+
+  const shareProduct = async () => {
+    const url = canonicalFor(`/p/${product.slug}`);
+    const priceVariant = selected ?? activeVariants[0] ?? null;
+    const priceLine = priceVariant ? ` at ${formatPaise(variantPrice(priceVariant))}` : '';
+    const text = `${product.name}${priceLine} — Chikbo`;
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({ title: product.name, text, url });
+        return;
+      } catch (err) {
+        // User dismissed the sheet — nothing to report.
+        if (err instanceof DOMException && err.name === 'AbortError') return;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.show('Link copied — share it with someone who would love this.', 'success');
+    } catch {
+      toast.show(url, 'info');
+    }
   };
 
   const toggleWishlist = () => {
@@ -527,9 +549,21 @@ export default function Product() {
 
         {/* ---- Buy box ---- */}
         <div className="buy-box">
-          <Link className="buy-cat" to={`/c/${product.categorySlug}`}>
-            {categoryName}
-          </Link>
+          <div className="buy-head">
+            <Link className="buy-cat" to={`/c/${product.categorySlug}`}>
+              {categoryName}
+            </Link>
+            <button
+              type="button"
+              className="buy-share"
+              onClick={shareProduct}
+              aria-label={`Share ${product.name}`}
+              title="Share this product"
+            >
+              <ShareIcon size={18} />
+              <span>Share</span>
+            </button>
+          </div>
           <h1 className="buy-title">
             <span className="mask-line">
               <motion.span

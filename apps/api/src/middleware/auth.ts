@@ -66,6 +66,38 @@ export const requireAuth = async (req: Request, _res: Response, next: NextFuncti
   }
 };
 
+/**
+ * Attaches `req.user` when a valid Bearer token is present, and otherwise
+ * continues without one. Routes that serve guests and members alike (cart,
+ * checkout, payments) use this together with the guest token header.
+ */
+export const optionalAuth = async (req: Request, _res: Response, next: NextFunction) => {
+  try {
+    const header = req.headers.authorization;
+    if (!header?.startsWith('Bearer ')) {
+      next();
+      return;
+    }
+    let payload: AccessTokenPayload;
+    try {
+      payload = jwt.verify(header.slice('Bearer '.length), env.JWT_ACCESS_SECRET) as AccessTokenPayload;
+    } catch {
+      // An expired token on a guest-capable route must not fail the request;
+      // the client refreshes and retries on its own schedule.
+      next();
+      return;
+    }
+    try {
+      (req as AuthedRequest).user = await resolveUser(payload.sub);
+    } catch {
+      // Deactivated or deleted account: treat as signed out.
+    }
+    next();
+  } catch (e) {
+    next(e);
+  }
+};
+
 /** Requires STAFF or SUPER_ADMIN. Use after requireAuth. */
 export const requireStaff = (req: Request, _res: Response, next: NextFunction) => {
   const user = (req as AuthedRequest).user;

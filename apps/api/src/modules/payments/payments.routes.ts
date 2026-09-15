@@ -2,14 +2,16 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { validate } from '../../middleware/validate';
 import { asyncHandler, ok } from '../../middleware/error';
-import { requireAuth, type AuthedRequest } from '../../middleware/auth';
+import { optionalAuth } from '../../middleware/auth';
+import { resolveCartOwner } from '../../middleware/guest';
 import * as paymentsService from './payments.service';
 
 export const paymentsRouter = Router();
 
+paymentsRouter.use(optionalAuth);
+
 paymentsRouter.post(
   '/verify',
-  requireAuth,
   validate({
     body: z.object({
       razorpay_order_id: z.string().min(1),
@@ -18,14 +20,12 @@ paymentsRouter.post(
     }),
   }),
   asyncHandler(async (req, res) => {
-    const { user } = req as AuthedRequest;
-    ok(res, await paymentsService.verifyAndCapture(user.id, req.body));
+    ok(res, await paymentsService.verifyAndCapture(resolveCartOwner(req), req.body));
   }),
 );
 
 paymentsRouter.post(
   '/failed',
-  requireAuth,
   validate({
     body: z.object({
       razorpay_order_id: z.string().min(1),

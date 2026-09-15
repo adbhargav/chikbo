@@ -17,7 +17,7 @@ export { FreeShippingBar };
 
 export default function Cart() {
   usePageMeta('Cart', 'Your Chikbo shopping cart.');
-  const { user, loading } = useAuth();
+  const { loading } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -27,18 +27,6 @@ export default function Cart() {
   const baseCart = useCart();
   const couponCart = useCart(appliedCoupon);
   const { updateItem, removeItem } = useCartMutations();
-
-  if (!loading && !user) {
-    return (
-      <div className="container page">
-        <EmptyState
-          title="Your cart is waiting"
-          body="Sign in to see your cart and pick up where you left off."
-          cta={{ label: 'Sign in', to: '/login' }}
-        />
-      </div>
-    );
-  }
 
   if (loading || baseCart.isPending) {
     return (

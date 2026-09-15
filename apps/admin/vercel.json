@@ -8,5 +8,6 @@
   },
   "buildCommand": "cd ../.. && npm run build --workspace packages/shared && npm run build --workspace apps/admin",
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/((?!assets/).*)", "destination": "/index.html" }]
+  "redirects": [{ "source": "/", "destination": "/admin/login", "permanent": false }],
+  "rewrites": [{ "source": "/admin/((?!assets/|brand/).*)", "destination": "/admin/index.html" }]
 }

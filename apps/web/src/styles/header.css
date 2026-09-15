@@ -10,20 +10,6 @@
   z-index: 100;
 }
 
-.utility-bar {
-  background: var(--ink-900);
-  color: var(--cream-50);
-  text-align: center;
-  font-size: 12.5px;
-  letter-spacing: 0.04em;
-  padding: 7px 16px;
-}
-
-.utility-gold {
-  color: var(--gold-500);
-  font-weight: 600;
-}
-
 /* The mega menu anchors to this wrapper, so it always drops below whatever
    part of the header is currently showing. */
 .header-body {
@@ -43,7 +29,8 @@
 }
 
 .main-bar-inner {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 16px;
   height: 68px;
@@ -54,14 +41,9 @@
   height: 60px;
 }
 
-.wordmark {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 24px;
-  letter-spacing: 0.18em;
-  color: var(--ink-900);
-  text-transform: uppercase;
-  white-space: nowrap;
+/* Centred text wordmark (base style lives in tokens.css). */
+.main-bar .wordmark {
+  justify-self: center;
   transition: font-size 260ms var(--ease);
 }
 
@@ -69,23 +51,14 @@
   font-size: 21px;
 }
 
-.wordmark--sm {
-  font-size: 19px;
-}
-
-.wordmark-o {
-  color: var(--brand-600);
-}
-
-/* --------------------------------------------------------- Centred main nav */
+/* ------------------------------------------------------ Left-aligned main nav */
 
 .main-nav {
   position: relative;
-  flex: 1 1 0;
   min-width: 0;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 4px;
 }
 
@@ -185,8 +158,8 @@
 .header-actions {
   display: flex;
   align-items: center;
+  justify-self: end;
   gap: 2px;
-  flex: none;
 }
 
 .cart-badge {
@@ -439,35 +412,6 @@
   transform: translateX(5px);
 }
 
-/* --------------------------------------- Mobile full-width search field row */
-
-.mobile-search-row {
-  display: none;
-  background: var(--cream-50);
-  padding-block: 9px 10px;
-  border-bottom: 1px solid rgba(185, 178, 169, 0.3);
-}
-
-.mobile-search {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: #fff;
-  border: 1px solid var(--ink-300);
-  border-radius: var(--radius-pill);
-  padding: 10px 16px;
-  color: var(--ink-500);
-  font-size: 14px;
-  text-align: left;
-}
-
-.mobile-search span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* ------------------------------------------------------------- Breakpoints */
 
 @media (min-width: 901px) {
@@ -484,10 +428,6 @@
   .main-nav,
   .mega {
     display: none;
-  }
-
-  .mobile-search-row {
-    display: block;
   }
 
   .icon-btn.nav-hamburger {
@@ -512,7 +452,6 @@
   .wordmark,
   .site-header--scrolled .wordmark {
     font-size: 19px;
-    justify-self: center;
   }
 
   .quick-strip-inner {

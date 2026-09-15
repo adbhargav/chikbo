@@ -29,6 +29,34 @@ export function clearTokens(): void {
 
 export const hasSession = (): boolean => getRefreshToken() !== null;
 
+const GUEST_KEY = 'chikbo.guestToken';
+
+/**
+ * Identifies this browser's guest cart and any orders placed before signing
+ * in. Created lazily, sent on every request as `X-Guest-Token`, and kept
+ * after sign-in so the server can claim what the guest session did.
+ */
+export function getGuestToken(): string {
+  try {
+    const existing = localStorage.getItem(GUEST_KEY);
+    if (existing) return existing;
+    const fresh = crypto.randomUUID();
+    localStorage.setItem(GUEST_KEY, fresh);
+    return fresh;
+  } catch {
+    return crypto.randomUUID();
+  }
+}
+
+/** Start a fresh guest identity — after the old one has been claimed by an account. */
+export function rotateGuestToken(): void {
+  try {
+    localStorage.setItem(GUEST_KEY, crypto.randomUUID());
+  } catch {
+    /* storage unavailable — nothing to rotate */
+  }
+}
+
 /** Fired when the refresh token is rejected — the app signs the user out. */
 export const SESSION_EXPIRED_EVENT = 'chikbo:session-expired';
 
@@ -91,7 +119,7 @@ function buildUrl(path: string, query?: RequestOptions['query']): string {
 
 async function request<T>(path: string, opts: RequestOptions, allowRetry: boolean): Promise<T> {
   const token = getAccessToken();
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = { 'X-Guest-Token': getGuestToken() };
   if (token) headers.Authorization = `Bearer ${token}`;
 
   let body: BodyInit | undefined;

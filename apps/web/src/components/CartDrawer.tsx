@@ -9,7 +9,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import { formatPaise } from '@chikbo/shared';
 import { ApiError } from '../lib/api';
-import { useAuth } from '../lib/auth';
 import { useCart, useCartMutations } from '../lib/queries';
 import { useCartUi } from '../lib/cart-ui';
 import { useToast } from '../lib/toast';
@@ -25,7 +24,6 @@ const FOCUSABLE =
 
 export function CartDrawer() {
   const { drawer, closeDrawer, holdDrawer } = useCartUi();
-  const { user } = useAuth();
   const { data: cart } = useCart();
   const { updateItem, removeItem } = useCartMutations();
   const toast = useToast();
@@ -137,15 +135,7 @@ export function CartDrawer() {
               </button>
             </header>
 
-            {!user ? (
-              <div className="drawer-empty">
-                <p className="drawer-empty-title">Your cart is waiting</p>
-                <p className="muted">Sign in to see your cart and pick up where you left off.</p>
-                <button type="button" className="btn btn-primary btn-sm" onClick={() => goTo('/login')}>
-                  Sign in
-                </button>
-              </div>
-            ) : !cart || cart.items.length === 0 ? (
+            {!cart || cart.items.length === 0 ? (
               <div className="drawer-empty">
                 <p className="drawer-empty-title">Nothing here yet</p>
                 <p className="muted">Beautiful things are a click away — start with our sarees.</p>

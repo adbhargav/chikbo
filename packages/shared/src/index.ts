@@ -331,11 +331,33 @@ export interface Paginated<T> {
 // Checkout contract
 // ---------------------------------------------------------------------------
 
+/** Delivery address supplied inline (guest checkout, or a one-off address). */
+export interface CheckoutAddressInput {
+  fullName: string;
+  phone: string;
+  line1: string;
+  line2?: string | null;
+  city: string;
+  state: string;
+  pincode: string;
+}
+
 export interface CheckoutCreateRequest {
-  addressId: string;
+  /** Signed-in customers: one of their saved addresses. */
+  addressId?: string;
+  /** Guests (or anyone): an address typed at checkout. Takes precedence over addressId. */
+  address?: CheckoutAddressInput;
+  /** Guests: where the confirmation goes. Ignored when signed in. */
+  email?: string;
   couponCode?: string;
   /** Client-generated UUID; server dedupes repeated submissions. */
   idempotencyKey: string;
+}
+
+/** Response of POST /orders/claim — attaches a guest session's orders and cart to the account. */
+export interface OrderClaimResponse {
+  claimedOrders: number;
+  mergedCartLines: number;
 }
 
 export interface CheckoutCreateResponse {

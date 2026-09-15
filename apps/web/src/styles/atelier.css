@@ -578,50 +578,7 @@ html.lenis body {
   margin-top: 8px;
 }
 
-/* ==========================================================================
-   Announcement marquee (header utility bar)
-   ========================================================================== */
-
-.marquee {
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-.marquee-track {
-  display: inline-flex;
-  animation: marquee-scroll 28s linear infinite;
-  will-change: transform;
-}
-
-.marquee:hover .marquee-track {
-  animation-play-state: paused;
-}
-
-.marquee-copy {
-  display: inline-flex;
-}
-
-.marquee-item {
-  display: inline-flex;
-  align-items: center;
-}
-
-.marquee-dot {
-  margin-inline: 18px;
-  color: var(--gold-500);
-}
-
-@keyframes marquee-scroll {
-  to {
-    transform: translateX(-50%);
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .marquee-track {
-    animation: none;
-  }
-
   .silk-sheen {
     animation: none;
   }

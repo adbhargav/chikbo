@@ -5,7 +5,7 @@ import { prisma } from '../../lib/prisma';
 import { ApiError } from '../../middleware/error';
 import { initiateRefund } from '../payments/payments.service';
 import { releaseOrderStock } from '../checkout/checkout.service';
-import { notifyUser } from '../../lib/notify';
+import { notifyCustomer } from '../../lib/notify';
 import { orderStatusEmail, returnRequestedEmail } from '../../lib/emails';
 
 type OrderWithRels = Order & {
@@ -90,6 +90,32 @@ export async function getMyOrder(userId: string, orderId: string): Promise<Order
   return toOrderDto(order);
 }
 
+/** A guest's own order, proven by the cart token that placed it. */
+export async function getGuestOrder(guestToken: string, orderId: string): Promise<OrderDto> {
+  const order = await prisma.order.findFirst({
+    where: { id: orderId, guestToken, userId: null },
+    include: includeForDto,
+  });
+  if (!order) throw ApiError.notFound('Order not found');
+  return toOrderDto(order);
+}
+
+/**
+ * Moves every unclaimed order placed with this guest token onto the account,
+ * so it appears under "My orders" and can be tracked, cancelled or returned.
+ * Coupon redemptions follow so per-customer limits keep counting correctly.
+ */
+export async function claimGuestOrders(userId: string, guestToken: string): Promise<number> {
+  return prisma.$transaction(async (tx) => {
+    const orders = await tx.order.findMany({ where: { guestToken, userId: null }, select: { id: true } });
+    if (orders.length === 0) return 0;
+    const ids = orders.map((o) => o.id);
+    await tx.order.updateMany({ where: { id: { in: ids } }, data: { userId } });
+    await tx.couponRedemption.updateMany({ where: { orderId: { in: ids }, userId: null }, data: { userId } });
+    return ids.length;
+  });
+}
+
 /** Customer cancellation. Restocks; refunds automatically when already paid. */
 export async function cancelMyOrder(userId: string, orderId: string, reason: string): Promise<void> {
   const order = await prisma.order.findFirst({
@@ -110,15 +136,17 @@ export async function cancelMyOrder(userId: string, orderId: string, reason: str
 
   const full = await prisma.order.findUnique({ where: { id: orderId }, include: { items: true, user: true } });
   if (full) {
-    const mail = orderStatusEmail(full, full.user.name, 'CANCELLED', { note: `Reason: ${reason}` });
-    await notifyUser({
-      userId: full.userId,
-      type: 'order_update',
-      title: 'Order cancelled',
-      body: `Your order ${full.orderNumber} has been cancelled.`,
-      data: { orderId },
-      email: mail ? { to: full.user.email, subject: mail.subject, html: mail.html } : undefined,
-    });
+    const mail = orderStatusEmail(full, full.user?.name ?? full.shipFullName, 'CANCELLED', { note: `Reason: ${reason}` });
+    await notifyCustomer(
+      { userId: full.userId, email: full.user?.email ?? full.guestEmail },
+      {
+        type: 'order_update',
+        title: 'Order cancelled',
+        body: `Your order ${full.orderNumber} has been cancelled.`,
+        data: { orderId },
+        email: mail,
+      },
+    );
   }
 }
 
@@ -161,15 +189,17 @@ export async function requestReturn(
 
   const full = await prisma.order.findUnique({ where: { id: orderId }, include: { items: true, user: true } });
   if (full) {
-    const mail = returnRequestedEmail(full, full.user.name, item.productName);
-    await notifyUser({
-      userId: full.userId,
-      type: 'return_update',
-      title: 'Return request received',
-      body: `We've received your return request for ${item.productName}.`,
-      data: { orderId },
-      email: { to: full.user.email, subject: mail.subject, html: mail.html },
-    });
+    const mail = returnRequestedEmail(full, full.user?.name ?? full.shipFullName, item.productName);
+    await notifyCustomer(
+      { userId: full.userId, email: full.user?.email ?? full.guestEmail },
+      {
+        type: 'return_update',
+        title: 'Return request received',
+        body: `We've received your return request for ${item.productName}.`,
+        data: { orderId },
+        email: mail,
+      },
+    );
   }
   return request.id;
 }

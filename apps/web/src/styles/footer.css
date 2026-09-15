@@ -11,34 +11,13 @@
   padding-block: 64px 48px;
 }
 
-.footer-logo {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  text-decoration: none;
-}
-
-.footer-logo .logo-mark {
-  border-radius: 6px;
-}
-
-.footer-logo .logo-word {
-  font-family: var(--font-display);
-  font-weight: 600;
+.wordmark.footer-wordmark {
   font-size: 26px;
-  letter-spacing: 0.18em;
-  color: var(--cream-50);
+  color: var(--brand-500);
 }
 
-.footer-wordmark {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 26px;
-  letter-spacing: 0.18em;
-  color: var(--cream-50);
-}
-
-.footer-wordmark span {
+.wordmark.footer-wordmark:hover,
+.wordmark.footer-wordmark:focus-visible {
   color: var(--brand-500);
 }
 

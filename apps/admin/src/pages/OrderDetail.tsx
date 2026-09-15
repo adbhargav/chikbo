@@ -287,7 +287,7 @@ export function OrderDetail() {
       <PageHead
         overline="Fulfilment"
         title={o.orderNumber}
-        sub={`Placed ${formatDateTime(o.createdAt)} by ${o.user.name}`}
+        sub={`Placed ${formatDateTime(o.createdAt)} by ${o.user?.name ?? `${o.shipFullName} (guest)`}`}
         actions={
           <Link to="/orders" className="btn btn-secondary">
             ← All orders
@@ -494,15 +494,21 @@ export function OrderDetail() {
             <h3 className="card-title">Customer</h3>
             <dl className="kv">
               <dt>Name</dt>
-              <dd>{o.user.name}</dd>
+              <dd>{o.user?.name ?? o.shipFullName}</dd>
               <dt>Email</dt>
-              <dd>{o.user.email}</dd>
+              <dd>{o.user?.email ?? o.guestEmail ?? '—'}</dd>
               <dt>Phone</dt>
-              <dd>{o.user.phone ?? '—'}</dd>
+              <dd>{o.user ? (o.user.phone ?? '—') : o.shipPhone}</dd>
             </dl>
-            <Link className="link" style={{ fontSize: 13, display: 'inline-block', marginTop: 10 }} to={`/customers/${o.userId}`}>
-              View customer →
-            </Link>
+            {o.user && o.userId ? (
+              <Link className="link" style={{ fontSize: 13, display: 'inline-block', marginTop: 10 }} to={`/customers/${o.userId}`}>
+                View customer →
+              </Link>
+            ) : (
+              <p className="muted" style={{ fontSize: 13, marginTop: 10 }}>
+                Guest checkout — no account yet. Emails go to the address above.
+              </p>
+            )}
           </div>
 
           <div className="card pad">

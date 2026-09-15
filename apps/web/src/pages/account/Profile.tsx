@@ -74,83 +74,101 @@ export default function Profile() {
 
   return (
     <div className="account-stack">
-      <section className="card card-pad" aria-labelledby="profile-title">
-        <h2 id="profile-title">Profile</h2>
+      <section className="card account-card" aria-labelledby="profile-title">
+        <header className="account-card-head">
+          <h2 id="profile-title">Personal details</h2>
+          <p className="muted">How we address you and where we reach you about your orders.</p>
+        </header>
         <form onSubmit={saveProfile} noValidate>
-          <div className="field">
-            <label htmlFor="profile-email">Email</label>
-            <input id="profile-email" className="input" value={user?.email ?? ''} disabled />
-          </div>
-          <div className="form-row">
+          <div className="account-card-body">
             <div className="field">
-              <label htmlFor="profile-name">Full name</label>
-              <input
-                id="profile-name"
-                className="input"
-                value={name}
-                aria-invalid={!!profileErrors.name}
-                onChange={(e) => setName(e.target.value)}
-              />
-              {profileErrors.name && <span className="field-error">{profileErrors.name}</span>}
+              <label htmlFor="profile-email">Email</label>
+              <input id="profile-email" className="input" value={user?.email ?? ''} disabled />
+              <span className="field-hint">Your sign-in email. Contact us to change it.</span>
             </div>
-            <div className="field">
-              <label htmlFor="profile-phone">Mobile number</label>
-              <input
-                id="profile-phone"
-                className="input"
-                type="tel"
-                inputMode="numeric"
-                maxLength={10}
-                value={phone ?? ''}
-                aria-invalid={!!profileErrors.phone}
-                onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
-              />
-              {profileErrors.phone && <span className="field-error">{profileErrors.phone}</span>}
+            <div className="form-row">
+              <div className="field">
+                <label htmlFor="profile-name">Full name</label>
+                <input
+                  id="profile-name"
+                  className="input"
+                  autoComplete="name"
+                  value={name}
+                  aria-invalid={!!profileErrors.name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+                {profileErrors.name && <span className="field-error">{profileErrors.name}</span>}
+              </div>
+              <div className="field">
+                <label htmlFor="profile-phone">Mobile number</label>
+                <input
+                  id="profile-phone"
+                  className="input"
+                  type="tel"
+                  inputMode="numeric"
+                  maxLength={10}
+                  autoComplete="tel-national"
+                  value={phone ?? ''}
+                  aria-invalid={!!profileErrors.phone}
+                  onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
+                />
+                {profileErrors.phone && <span className="field-error">{profileErrors.phone}</span>}
+              </div>
             </div>
           </div>
-          <button type="submit" className="btn btn-primary btn-sm" disabled={savingProfile}>
-            {savingProfile ? 'Saving…' : 'Save changes'}
-          </button>
+          <footer className="account-card-foot">
+            <button type="submit" className="btn btn-primary btn-sm" disabled={savingProfile}>
+              {savingProfile ? 'Saving…' : 'Save changes'}
+            </button>
+          </footer>
         </form>
       </section>
 
-      <section className="card card-pad" aria-labelledby="password-title">
-        <h2 id="password-title">Change password</h2>
-        <p className="muted" style={{ fontSize: 14, marginBottom: 14 }}>
-          Changing your password signs you out of all devices.
-        </p>
+      <section className="card account-card" aria-labelledby="password-title">
+        <header className="account-card-head">
+          <h2 id="password-title">Password</h2>
+          <p className="muted">Changing your password signs you out of all devices.</p>
+        </header>
         <form onSubmit={changePassword} noValidate>
-          <div className="form-row">
-            <div className="field">
-              <label htmlFor="pw-current">Current password</label>
-              <input
-                id="pw-current"
-                className="input"
-                type="password"
-                autoComplete="current-password"
-                value={currentPassword}
-                aria-invalid={!!passwordErrors.current}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-              />
-              {passwordErrors.current && <span className="field-error">{passwordErrors.current}</span>}
-            </div>
-            <div className="field">
-              <label htmlFor="pw-new">New password</label>
-              <input
-                id="pw-new"
-                className="input"
-                type="password"
-                autoComplete="new-password"
-                value={newPassword}
-                aria-invalid={!!passwordErrors.next}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
-              {passwordErrors.next && <span className="field-error">{passwordErrors.next}</span>}
+          <div className="account-card-body">
+            <div className="form-row">
+              <div className="field">
+                <label htmlFor="pw-current">Current password</label>
+                <input
+                  id="pw-current"
+                  className="input"
+                  type="password"
+                  autoComplete="current-password"
+                  value={currentPassword}
+                  aria-invalid={!!passwordErrors.current}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                />
+                {passwordErrors.current && <span className="field-error">{passwordErrors.current}</span>}
+              </div>
+              <div className="field">
+                <label htmlFor="pw-new">New password</label>
+                <input
+                  id="pw-new"
+                  className="input"
+                  type="password"
+                  autoComplete="new-password"
+                  value={newPassword}
+                  aria-invalid={!!passwordErrors.next}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                />
+                {passwordErrors.next ? (
+                  <span className="field-error">{passwordErrors.next}</span>
+                ) : (
+                  <span className="field-hint">At least 8 characters, with a letter and a number.</span>
+                )}
+              </div>
             </div>
           </div>
-          <button type="submit" className="btn btn-secondary btn-sm" disabled={savingPassword}>
-            {savingPassword ? 'Updating…' : 'Update password'}
-          </button>
+          <footer className="account-card-foot">
+            <button type="submit" className="btn btn-secondary btn-sm" disabled={savingPassword}>
+              {savingPassword ? 'Updating…' : 'Update password'}
+            </button>
+          </footer>
         </form>
       </section>
     </div>

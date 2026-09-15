@@ -15,7 +15,6 @@ import { EASE, useMotionOK } from '../../lib/motion';
 import { POLICY_LINKS, NEW_ARRIVALS, accountLinks, categoryPath, childrenOf } from '../../lib/nav';
 import { useFocusTrap, useNavUi, useScrollLock } from '../../lib/nav-ui';
 import { ChevronDownIcon, CloseIcon, SearchIcon } from '../icons';
-import { Logo } from '../Logo';
 import '../../styles/nav.css';
 
 interface Props {
@@ -62,8 +61,8 @@ export function MobileDrawer({ categories }: Props) {
             transition={ok ? { type: 'spring', stiffness: 300, damping: 34 } : { duration: 0.16 }}
           >
             <header className="nav-drawer-head">
-              <Link to="/" className="nav-drawer-logo" onClick={closeNav} aria-label="Chikbo home">
-                <Logo to={null} size={30} />
+              <Link to="/" className="wordmark nav-drawer-logo" onClick={closeNav} aria-label="Chikbo home">
+                CHIKBO
               </Link>
               <button
                 type="button"

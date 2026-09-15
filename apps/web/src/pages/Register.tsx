@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { useToast } from '../lib/toast';
 import { ApiError } from '../lib/api';
@@ -13,6 +13,8 @@ export default function Register() {
   const { register } = useAuth();
   const toast = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as { from?: string } | null)?.from ?? '/';
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -42,7 +44,7 @@ export default function Register() {
         phone: phone.trim() || undefined,
       });
       toast.show('Welcome to Chikbo — account created.', 'success');
-      navigate('/', { replace: true });
+      navigate(from, { replace: true });
     } catch (err) {
       setErrors({
         form: err instanceof ApiError ? err.message : 'Could not create your account.',

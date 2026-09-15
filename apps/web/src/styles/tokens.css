@@ -642,3 +642,23 @@ p {
 .logo-word span {
   color: var(--brand-600);
 }
+
+/* Text wordmark — bold, wide-tracked caps. Shared by header, footer, drawer. */
+.wordmark {
+  display: inline-block;
+  font-family: var(--font-ui);
+  font-weight: 800;
+  font-size: 24px;
+  letter-spacing: 0.24em;
+  text-indent: 0.24em; /* balance the trailing tracking so the word sits centred */
+  line-height: 1;
+  color: var(--brand-600);
+  text-transform: uppercase;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.wordmark:hover,
+.wordmark:focus-visible {
+  color: var(--brand-600);
+}

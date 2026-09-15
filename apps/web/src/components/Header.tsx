@@ -1,5 +1,5 @@
 /**
- * Site header — announcement marquee, main bar, hover mega menu and the
+ * Site header — main bar, hover mega menu and the
  * quick-link strip. Everything below the wordmark is driven by the live
  * category tree from `GET /catalog/categories`; no category is named in code.
  *
@@ -13,7 +13,6 @@
  * bottom tab bar are rendered by Layout.)
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Logo } from './Logo';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import type { CategoryDto } from '@chikbo/shared';
@@ -36,13 +35,6 @@ import {
 } from './icons';
 import '../styles/header.css';
 import '../styles/nav.css';
-
-const MARQUEE_ITEMS = [
-  'Pan-India shipping',
-  'Free delivery over ₹999',
-  'Trusted since 1992',
-  'Woven with pride',
-];
 
 /** Hover timings from the spec. */
 const OPEN_DELAY = 150;
@@ -338,26 +330,6 @@ export function Header() {
 
   return (
     <header className={headerClass} ref={headerRef}>
-      {/* Announcement marquee */}
-      <div className="utility-bar" aria-label="Announcements">
-        <div className="marquee" aria-hidden={ok ? undefined : 'false'}>
-          <div className="marquee-track">
-            {[0, 1].map((copy) => (
-              <span key={copy} className="marquee-copy" aria-hidden={copy === 1}>
-                {MARQUEE_ITEMS.map((item, i) => (
-                  <span key={i} className="marquee-item">
-                    {item.includes('1992') ? <span className="utility-gold">{item}</span> : item}
-                    <span className="marquee-dot" aria-hidden="true">
-                      ·
-                    </span>
-                  </span>
-                ))}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-
       <div className="header-body" onPointerLeave={scheduleClose} onBlur={onHeaderBlur}>
         <div className="main-bar">
           <div className="container main-bar-inner">
@@ -371,8 +343,6 @@ export function Header() {
             >
               <MenuIcon />
             </button>
-
-            <Logo size={44} className="header-logo" />
 
             <nav className="main-nav" aria-label="Categories" ref={navRef}>
               {visible.map((category, index) => (
@@ -453,6 +423,10 @@ export function Header() {
               </div>
             </nav>
 
+            <Link to="/" className="wordmark" aria-label="Chikbo home">
+              CHIKBO
+            </Link>
+
             <div className="header-actions">
               <button
                 type="button"
@@ -464,20 +438,6 @@ export function Header() {
               >
                 <SearchIcon />
               </button>
-              <Link
-                to={user ? '/account/wishlist' : '/login'}
-                className="icon-btn header-action--desk"
-                aria-label="Wishlist"
-              >
-                <HeartIcon />
-              </Link>
-              <Link
-                to={user ? '/account' : '/login'}
-                className="icon-btn header-action--desk"
-                aria-label={user ? `Account — ${user.name}` : 'Sign in'}
-              >
-                <UserIcon />
-              </Link>
               <button
                 type="button"
                 className="icon-btn"
@@ -499,23 +459,21 @@ export function Header() {
                   </motion.span>
                 )}
               </button>
+              <Link
+                to={user ? '/account/wishlist' : '/login'}
+                className="icon-btn header-action--desk"
+                aria-label="Wishlist"
+              >
+                <HeartIcon />
+              </Link>
+              <Link
+                to={user ? '/account' : '/login'}
+                className="icon-btn header-action--desk"
+                aria-label={user ? `Account — ${user.name}` : 'Sign in'}
+              >
+                <UserIcon />
+              </Link>
             </div>
-          </div>
-        </div>
-
-        {/* Mobile: full-width search field under the header. */}
-        <div className="mobile-search-row">
-          <div className="container">
-            <button
-              type="button"
-              className="mobile-search"
-              aria-haspopup="dialog"
-              aria-expanded={panel === 'search'}
-              onClick={toggleSearch}
-            >
-              <SearchIcon size={18} />
-              <span>Search sarees, dresses, jewellery…</span>
-            </button>
           </div>
         </div>
 

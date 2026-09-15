@@ -5,9 +5,25 @@ import { razorpay, razorpayConfigured } from '../../lib/razorpay';
 import { env } from '../../config/env';
 import { logger } from '../../lib/logger';
 import { ApiError } from '../../middleware/error';
+import type { CartOwner } from '../../middleware/guest';
 import { computeTotals, effectiveUnitPrice, type CouponRule } from '../../utils/pricing';
 import { generateOrderNumber } from '../../utils/orderNumber';
-import { getValidCoupon } from '../cart/cart.service';
+import { getValidCoupon, ownerWhere, type CouponIdentity } from '../cart/cart.service';
+
+/** Who is checking out: an account holder, or a guest identified by cart token + email. */
+export type CheckoutActor =
+  | { kind: 'user'; user: { id: string; email: string; name: string } }
+  | { kind: 'guest'; guestToken: string; email: string };
+
+interface ShippingAddress {
+  fullName: string;
+  phone: string;
+  line1: string;
+  line2: string | null;
+  city: string;
+  state: string;
+  pincode: string;
+}
 
 /**
  * Creates an order from the user's cart:
@@ -19,33 +35,36 @@ import { getValidCoupon } from '../cart/cart.service';
  *  4. The Razorpay order is created after the DB transaction; on failure the
  *     reservation is compensated (stock restored, order cancelled).
  */
-export async function createCheckout(
-  user: { id: string; email: string; name: string },
-  input: CheckoutCreateRequest,
-): Promise<CheckoutCreateResponse> {
+export async function createCheckout(actor: CheckoutActor, input: CheckoutCreateRequest): Promise<CheckoutCreateResponse> {
   if (!razorpayConfigured) {
     throw ApiError.unprocessable('PAYMENTS_UNAVAILABLE', 'Payments are not configured yet. Please try again later.');
   }
 
-  // Idempotent replay: return the existing pending order.
+  const owner: CartOwner = actor.kind === 'user' ? { userId: actor.user.id } : { guestToken: actor.guestToken };
+  const contactEmail = (actor.kind === 'user' ? actor.user.email : actor.email).trim().toLowerCase();
+  const couponIdentity: CouponIdentity =
+    actor.kind === 'user' ? { userId: actor.user.id } : { guestEmail: contactEmail };
+
+  // Idempotent replay: return the existing pending order — but only to whoever placed it.
   const existing = await prisma.order.findUnique({
     where: { idempotencyKey: input.idempotencyKey },
     include: { payments: { orderBy: { createdAt: 'desc' }, take: 1 } },
   });
   if (existing) {
+    const owned = owner.userId ? existing.userId === owner.userId : existing.guestToken === owner.guestToken;
+    if (!owned) throw ApiError.conflict('This checkout belongs to another session');
     const payment = existing.payments[0];
     if (!payment) throw ApiError.conflict('Order already exists in an inconsistent state, contact support');
     if (existing.status !== 'PENDING') throw ApiError.conflict('This order has already been processed');
-    return buildResponse(existing, payment.razorpayOrderId, user);
+    return buildResponse(existing, payment.razorpayOrderId, contactEmail);
   }
 
-  const address = await prisma.address.findFirst({ where: { id: input.addressId, userId: user.id } });
-  if (!address) throw ApiError.badRequest('Select a valid delivery address');
+  const address = await resolveAddress(actor, input);
 
   const order = await prisma.$transaction(
     async (tx) => {
       const cartItems = await tx.cartItem.findMany({
-        where: { userId: user.id },
+        where: ownerWhere(owner),
         include: { variant: { include: { product: { include: { images: { orderBy: { sortOrder: 'asc' }, take: 1 } } } } } },
       });
       const usable = cartItems.filter((c) => c.variant.isActive && c.variant.product.isActive);
@@ -77,7 +96,7 @@ export async function createCheckout(
       let couponCode: string | null = null;
       if (input.couponCode) {
         const subtotal = lines.reduce((s, l) => s + l.unitPriceInPaise * l.qty, 0);
-        const coupon = await getValidCoupon(input.couponCode, user.id, subtotal);
+        const coupon = await getValidCoupon(input.couponCode, couponIdentity, subtotal);
         couponRule = {
           type: coupon.type,
           value: coupon.value,
@@ -93,7 +112,9 @@ export async function createCheckout(
       const created = await tx.order.create({
         data: {
           orderNumber: generateOrderNumber(),
-          userId: user.id,
+          userId: owner.userId ?? null,
+          guestToken: owner.guestToken ?? null,
+          guestEmail: actor.kind === 'guest' ? contactEmail : null,
           idempotencyKey: input.idempotencyKey,
           status: 'PENDING',
           subtotalInPaise: totals.subtotalInPaise,
@@ -126,7 +147,14 @@ export async function createCheckout(
       });
 
       if (couponId) {
-        await tx.couponRedemption.create({ data: { couponId, userId: user.id, orderId: created.id } });
+        await tx.couponRedemption.create({
+          data: {
+            couponId,
+            userId: owner.userId ?? null,
+            guestEmail: actor.kind === 'guest' ? contactEmail : null,
+            orderId: created.id,
+          },
+        });
       }
 
       for (const item of usable) {
@@ -164,7 +192,7 @@ export async function createCheckout(
         status: 'CREATED',
       },
     });
-    return buildResponse(order, rzpOrder.id, user);
+    return buildResponse(order, rzpOrder.id, contactEmail);
   } catch (err) {
     logger.error({ err, orderId: order.id }, 'Razorpay order creation failed — compensating');
     await releaseOrderStock(order.id, 'Payment initialisation failed');
@@ -172,10 +200,41 @@ export async function createCheckout(
   }
 }
 
+/**
+ * The address to ship to: an inline address wins (it is the only option for
+ * guests); otherwise a saved address that belongs to the signed-in user.
+ */
+async function resolveAddress(actor: CheckoutActor, input: CheckoutCreateRequest): Promise<ShippingAddress> {
+  if (input.address) {
+    const a = input.address;
+    return {
+      fullName: a.fullName.trim(),
+      phone: a.phone.trim(),
+      line1: a.line1.trim(),
+      line2: a.line2?.trim() || null,
+      city: a.city.trim(),
+      state: a.state.trim(),
+      pincode: a.pincode.trim(),
+    };
+  }
+  if (actor.kind !== 'user' || !input.addressId) throw ApiError.badRequest('Enter a delivery address');
+  const saved = await prisma.address.findFirst({ where: { id: input.addressId, userId: actor.user.id } });
+  if (!saved) throw ApiError.badRequest('Select a valid delivery address');
+  return {
+    fullName: saved.fullName,
+    phone: saved.phone,
+    line1: saved.line1,
+    line2: saved.line2,
+    city: saved.city,
+    state: saved.state,
+    pincode: saved.pincode,
+  };
+}
+
 function buildResponse(
-  order: { id: string; orderNumber: string; totalInPaise: number },
+  order: { id: string; orderNumber: string; totalInPaise: number; shipFullName: string; shipPhone: string },
   razorpayOrderId: string,
-  user: { email: string; name: string },
+  email: string,
 ): CheckoutCreateResponse {
   return {
     orderId: order.id,
@@ -184,7 +243,7 @@ function buildResponse(
     razorpayKeyId: env.RAZORPAY_KEY_ID,
     amountInPaise: order.totalInPaise,
     currency: 'INR',
-    prefill: { name: user.name, email: user.email, contact: '' },
+    prefill: { name: order.shipFullName, email, contact: order.shipPhone },
   };
 }
 

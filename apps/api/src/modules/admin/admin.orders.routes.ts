@@ -8,7 +8,7 @@ import { requireAuth, requireStaff, requirePermission, type AuthedRequest } from
 import * as shippingService from '../shipping/shipping.service';
 import * as paymentsService from '../payments/payments.service';
 import { releaseOrderStock } from '../checkout/checkout.service';
-import { notifyUser } from '../../lib/notify';
+import { notifyCustomer, notifyUser } from '../../lib/notify';
 import { orderStatusEmail, returnDecisionEmail } from '../../lib/emails';
 
 export const adminOrdersRouter = Router();
@@ -133,20 +133,22 @@ adminOrdersRouter.post(
     });
     if (full) {
       const shipment = full.shipments[0];
-      const mail = orderStatusEmail(full, full.user.name, req.body.status, {
+      const mail = orderStatusEmail(full, full.user?.name ?? full.shipFullName, req.body.status, {
         awbCode: shipment?.awbCode,
         courierName: shipment?.courierName,
         note: req.body.note,
       });
       if (mail) {
-        await notifyUser({
-          userId: full.userId,
-          type: 'order_update',
-          title: `Order ${req.body.status.toLowerCase().replace(/_/g, ' ')}`,
-          body: `Your Chikbo order ${full.orderNumber} is now ${req.body.status.toLowerCase().replace(/_/g, ' ')}.`,
-          data: { orderId: full.id },
-          email: { to: full.user.email, subject: mail.subject, html: mail.html },
-        });
+        await notifyCustomer(
+          { userId: full.userId, email: full.user?.email ?? full.guestEmail },
+          {
+            type: 'order_update',
+            title: `Order ${req.body.status.toLowerCase().replace(/_/g, ' ')}`,
+            body: `Your Chikbo order ${full.orderNumber} is now ${req.body.status.toLowerCase().replace(/_/g, ' ')}.`,
+            data: { orderId: full.id },
+            email: mail,
+          },
+        );
       }
     }
     ok(res, await prisma.order.findUnique({ where: { id: order.id }, include: { statusHistory: true } }));
@@ -272,7 +274,7 @@ adminOrdersRouter.post(
     const mail = full
       ? returnDecisionEmail(
           full,
-          full.user.name,
+          full.user?.name ?? full.shipFullName,
           request.orderItem.productName,
           req.body.decision === 'APPROVED',
           req.body.adminNote,
@@ -287,7 +289,7 @@ adminOrdersRouter.post(
           ? `Your return for "${request.orderItem.productName}" is approved. Pickup will be scheduled soon.`
           : `Your return for "${request.orderItem.productName}" could not be approved. ${req.body.adminNote ?? ''}`,
       data: { orderId: request.orderId },
-      email: mail && full ? { to: full.user.email, subject: mail.subject, html: mail.html } : undefined,
+      email: mail && full?.user ? { to: full.user.email, subject: mail.subject, html: mail.html } : undefined,
     });
     ok(res, updated);
   }),
@@ -374,7 +376,7 @@ adminOrdersRouter.get(
       prisma.payment.count({ where }),
       prisma.payment.findMany({
         where,
-        include: { order: { select: { orderNumber: true, user: { select: { email: true } } } }, refunds: true },
+        include: { order: { select: { orderNumber: true, guestEmail: true, user: { select: { email: true } } } }, refunds: true },
         orderBy: { createdAt: 'desc' },
         skip: (q.page - 1) * q.pageSize,
         take: q.pageSize,

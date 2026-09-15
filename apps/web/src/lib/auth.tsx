@@ -2,7 +2,17 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { api, clearTokens, getRefreshToken, hasSession, setTokens, SESSION_EXPIRED_EVENT } from './api';
+import type { OrderClaimResponse } from '@chikbo/shared';
+import {
+  api,
+  clearTokens,
+  getGuestToken,
+  getRefreshToken,
+  hasSession,
+  rotateGuestToken,
+  setTokens,
+  SESSION_EXPIRED_EVENT,
+} from './api';
 import { useToast } from './toast';
 
 export interface AuthUser {
@@ -36,6 +46,23 @@ interface AuthPayload {
   user: AuthUser;
   accessToken: string;
   refreshToken: string;
+}
+
+/**
+ * Hand the guest session over to the account that just signed in: orders
+ * placed as a guest become the account's orders and the guest cart folds into
+ * the account cart. Best effort — a failure here must never block sign-in.
+ */
+async function claimGuestSession(): Promise<OrderClaimResponse | null> {
+  const guestToken = getGuestToken();
+  try {
+    const result = await api<OrderClaimResponse>('/orders/claim', { method: 'POST', body: { guestToken } });
+    // The token is spent once claimed; a fresh one keeps the next guest session separate.
+    rotateGuestToken();
+    return result;
+  } catch {
+    return null;
+  }
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -79,6 +106,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (email: string, password: string) => {
       const data = await api<AuthPayload>('/auth/login', { method: 'POST', body: { email, password } });
       setTokens(data.accessToken, data.refreshToken);
+      await claimGuestSession();
       setUser(data.user);
       queryClient.clear();
     },
@@ -89,6 +117,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (idToken: string) => {
       const data = await api<AuthPayload>('/auth/google', { method: 'POST', body: { idToken } });
       setTokens(data.accessToken, data.refreshToken);
+      await claimGuestSession();
       setUser(data.user);
       queryClient.clear();
     },
@@ -99,6 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (idToken: string) => {
       const data = await api<AuthPayload>('/auth/firebase', { method: 'POST', body: { idToken } });
       setTokens(data.accessToken, data.refreshToken);
+      await claimGuestSession();
       setUser(data.user);
       queryClient.clear();
     },
@@ -109,6 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     async (input: { email: string; password: string; name: string; phone?: string }) => {
       const data = await api<AuthPayload>('/auth/register', { method: 'POST', body: input });
       setTokens(data.accessToken, data.refreshToken);
+      await claimGuestSession();
       setUser(data.user);
       queryClient.clear();
     },

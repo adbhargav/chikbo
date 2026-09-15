@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useCategories } from '../lib/queries';
 import { EASE, useMotionOK } from '../lib/motion';
-import { Logo } from './Logo';
 import '../styles/footer.css';
 
 export function Footer() {
@@ -22,7 +21,9 @@ export function Footer() {
       />
       <div className="container footer-grid">
         <div className="footer-brand">
-          <Logo size={40} className="footer-logo" />
+          <Link to="/" className="wordmark footer-wordmark" aria-label="Chikbo home">
+            CHIKBO
+          </Link>
           <p className="footer-heritage">Dealing in textiles since 1992</p>
           <p className="footer-story">
             Three decades of trust, woven into every weave. From handpicked sarees to

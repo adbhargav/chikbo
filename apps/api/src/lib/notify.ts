@@ -128,3 +128,41 @@ export async function notifyUser(params: {
     if (failed.length > 0) logger.warn({ userId, failed: failed.length }, 'Some notification channels failed');
   });
 }
+
+/**
+ * Reaches an order's customer whether or not they have an account. Members get
+ * the full in-app + push + email + WhatsApp treatment via `notifyUser`; guests
+ * get email (and WhatsApp when a phone is known) — there is no inbox to write
+ * to and no device to push to.
+ */
+export async function notifyCustomer(
+  customer: { userId: string | null; email: string | null; phone?: string | null },
+  params: {
+    type: string;
+    title: string;
+    body: string;
+    data?: Record<string, string>;
+    email?: { subject: string; html: string } | null;
+    whatsapp?: string;
+  },
+): Promise<void> {
+  const email = customer.email && params.email ? { to: customer.email, ...params.email } : undefined;
+  const whatsapp = customer.phone && params.whatsapp ? { phone: customer.phone, message: params.whatsapp } : undefined;
+  if (customer.userId) {
+    await notifyUser({
+      userId: customer.userId,
+      type: params.type,
+      title: params.title,
+      body: params.body,
+      data: params.data,
+      email,
+      whatsapp,
+    });
+    return;
+  }
+  // Deliberately not awaited — same reasoning as notifyUser.
+  void Promise.allSettled([
+    email ? sendEmail(email.to, email.subject, email.html) : Promise.resolve(),
+    whatsapp ? sendWhatsApp(whatsapp.phone, whatsapp.message) : Promise.resolve(),
+  ]);
+}

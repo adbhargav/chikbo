@@ -167,7 +167,7 @@ export function Dashboard() {
                             {o.orderNumber}
                           </Link>
                         </td>
-                        <td>{o.user.name}</td>
+                        <td>{o.user?.name ?? `${o.shipFullName} (guest)`}</td>
                         <td className="num">{o.items.reduce((s, i) => s + i.qty, 0)}</td>
                         <td>
                           <Pill status={o.status} />

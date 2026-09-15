@@ -79,7 +79,7 @@ export function Payments() {
                     return (
                       <tr key={p.id}>
                         <td className="primary">{p.order.orderNumber}</td>
-                        <td className="muted">{p.order.user.email}</td>
+                        <td className="muted">{p.order.user?.email ?? p.order.guestEmail ?? '—'}</td>
                         <td className="money">
                           <Money paise={p.amountInPaise} />
                         </td>

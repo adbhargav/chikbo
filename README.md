@@ -46,7 +46,7 @@ npm run prisma:seed --workspace apps/api
 # 5. Run everything (three terminals)
 npm run dev:api     # http://localhost:4000
 npm run dev:web     # http://localhost:5173
-npm run dev:admin   # http://localhost:5174
+npm run dev:admin   # http://localhost:5174/admin  (staff sign-in: /admin/login)
 
 # Mobile app (separate install — not part of the npm workspace)
 cd apps/mobile && npm install && npx expo start
@@ -58,6 +58,20 @@ Seeded logins (change these in production — set `SEED_ADMIN_EMAIL`/`SEED_ADMIN
 |---|---|---|---|
 | Super admin | admin@chikbo.in | ChangeMe@123 | SUPER_ADMIN (all permissions) |
 | Operations | ops@chikbo.in | ChangeMe@123 | STAFF — Operations Manager |
+
+## Admin console URL
+
+The admin app is served under the `/admin` prefix (Vite `base` + router
+`basename`), so its sign-in page is always `/admin/login` — distinct from the
+storefront's customer `/login`:
+
+- Local: `http://localhost:5174/admin/login`
+- Deployed on its own Vercel project (`apps/admin/vercel.json`): `https://<admin-project>.vercel.app/admin/login`
+  (the bare origin redirects there).
+- To expose it on the storefront domain instead, add a rewrite to
+  `apps/web/vercel.json` once the admin project URL is known:
+  `{ "source": "/admin/:path*", "destination": "https://<admin-project>.vercel.app/admin/:path*" }`
+  and include that domain in the API's `CORS_ORIGINS`.
 
 ## Tests & builds
 

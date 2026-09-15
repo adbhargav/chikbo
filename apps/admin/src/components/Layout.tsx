@@ -50,7 +50,7 @@ export function Layout() {
     <div className="shell">
       <aside className="sidebar">
         <div className="sidebar-brand">
-          <img src="/brand/chikbo-logo.png" alt="Chikbo" className="sidebar-logo" style={{ height: 38, width: 'auto', objectFit: 'contain' }} />
+          <img src={`${import.meta.env.BASE_URL}brand/chikbo-logo.png`} alt="Chikbo" className="sidebar-logo" style={{ height: 38, width: 'auto', objectFit: 'contain' }} />
           <div className="sidebar-tagline">Admin · Since 1992</div>
         </div>
         <nav aria-label="Main navigation">

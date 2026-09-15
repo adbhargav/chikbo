@@ -1,15 +1,25 @@
 import { useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { formatPaise } from '@chikbo/shared';
-import type { AddressDto, CheckoutCreateResponse } from '@chikbo/shared';
+import type { AddressDto, CheckoutCreateRequest, CheckoutCreateResponse } from '@chikbo/shared';
 import { api, ApiError } from '../lib/api';
+import { useAuth } from '../lib/auth';
 import { useAddresses, useCart } from '../lib/queries';
 import { useToast } from '../lib/toast';
 import { usePageMeta } from '../lib/usePageMeta';
 import { loadRazorpay } from '../lib/razorpay';
 import { Magnetic, Reveal } from '../lib/motion';
-import { AddressForm } from '../components/AddressForm';
+import { EMAIL_RE } from '../lib/format';
+import {
+  AddressFields,
+  AddressForm,
+  emptyAddress,
+  toAddressPayload,
+  validateAddress,
+  type AddressErrors,
+  type AddressFormValues,
+} from '../components/AddressForm';
 import { EmptyState, ErrorState } from '../components/ui';
 import { CheckIcon } from '../components/icons';
 import '../styles/checkout.css';
@@ -19,17 +29,26 @@ type Phase = 'idle' | 'creating' | 'paying' | 'failed';
 export default function Checkout() {
   usePageMeta('Checkout', 'Secure checkout at Chikbo.');
   const navigate = useNavigate();
+  const location = useLocation();
   const toast = useToast();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const couponParam = searchParams.get('coupon');
+  const { user, loading: authLoading } = useAuth();
+  const isGuest = !authLoading && !user;
 
   // Keep one idempotency key for this checkout session so retries return the
   // same pending order from the server.
   const [idempotencyKey] = useState<string>(() => crypto.randomUUID());
 
+  // Guest checkout: contact email + a one-off delivery address, nothing saved.
+  const [guestEmail, setGuestEmail] = useState('');
+  const [guestAddress, setGuestAddress] = useState<AddressFormValues>(emptyAddress);
+  const [guestErrors, setGuestErrors] = useState<AddressErrors & { email?: string }>({});
+  const guestEmailValid = EMAIL_RE.test(guestEmail.trim());
+
   const addresses = useAddresses();
-  const couponCart = useCart(couponParam);
+  const couponCart = useCart(couponParam, isGuest && guestEmailValid ? guestEmail.trim() : null);
   const baseCart = useCart();
   const couponValid = !!couponParam && couponCart.isSuccess;
   const cart = couponValid ? couponCart.data : baseCart.data;
@@ -46,25 +65,39 @@ export default function Checkout() {
   }, [selectedId, addresses.data]);
 
   const busy = phase === 'creating' || phase === 'paying';
+  const canPlace = isGuest ? true : !!effectiveSelectedId;
+
+  /** Validates the guest form and returns the request body, or null when something is missing. */
+  const guestRequest = (): Partial<CheckoutCreateRequest> | null => {
+    const next: AddressErrors & { email?: string } = validateAddress(guestAddress);
+    if (!guestEmailValid) next.email = 'Enter a valid email address for your order confirmation.';
+    setGuestErrors(next);
+    if (Object.keys(next).length > 0) {
+      document.querySelector<HTMLElement>('[aria-invalid="true"]')?.focus();
+      return null;
+    }
+    return { email: guestEmail.trim(), address: toAddressPayload(guestAddress) };
+  };
 
   const placeOrder = async () => {
-    if (!effectiveSelectedId) {
-      toast.show('Please select a delivery address.', 'error');
-      return;
+    let body: CheckoutCreateRequest;
+    if (isGuest) {
+      const guest = guestRequest();
+      if (!guest) return;
+      body = { ...guest, couponCode: couponValid ? couponParam : undefined, idempotencyKey };
+    } else {
+      if (!effectiveSelectedId) {
+        toast.show('Please select a delivery address.', 'error');
+        return;
+      }
+      body = { addressId: effectiveSelectedId, couponCode: couponValid ? couponParam : undefined, idempotencyKey };
     }
     setError(null);
     setPhase('creating');
 
     let checkout: CheckoutCreateResponse;
     try {
-      checkout = await api<CheckoutCreateResponse>('/checkout', {
-        method: 'POST',
-        body: {
-          addressId: effectiveSelectedId,
-          couponCode: couponValid ? couponParam : undefined,
-          idempotencyKey,
-        },
-      });
+      checkout = await api<CheckoutCreateResponse>('/checkout', { method: 'POST', body });
     } catch (err) {
       setPhase('idle');
       if (err instanceof ApiError) {
@@ -141,7 +174,7 @@ export default function Checkout() {
 
   /* ---- Loading / guard states ---- */
 
-  if (baseCart.isPending || addresses.isPending) {
+  if (authLoading || baseCart.isPending || (!!user && addresses.isPending)) {
     return (
       <div className="container page" aria-busy="true">
         <div className="skeleton" style={{ height: 36, width: 240, marginBottom: 28 }} />
@@ -190,17 +223,62 @@ export default function Checkout() {
 
       <div className="checkout-layout">
         <div className="checkout-main">
+          {isGuest && (
+            <p className="checkout-signin">
+              <span>Checking out as a guest — no account needed.</span>
+              <Link to="/login" state={{ from: location.pathname + location.search }}>
+                Have an account? Sign in
+              </Link>
+            </p>
+          )}
+
           {/* ---- Address ---- */}
           <Reveal y={18}>
           <section className="checkout-section card card-pad" aria-labelledby="delivery-title">
-            <h2 id="delivery-title">Delivery address</h2>
+            <h2 id="delivery-title">{isGuest ? 'Contact & delivery' : 'Delivery address'}</h2>
 
-            {addressList.length === 0 && formMode === 'closed' && (
+            {isGuest && (
+              <div className="checkout-contact">
+                <div className="field">
+                  <label htmlFor="guest-email">Email</label>
+                  <input
+                    id="guest-email"
+                    className="input"
+                    type="email"
+                    autoComplete="email"
+                    inputMode="email"
+                    value={guestEmail}
+                    aria-invalid={!!guestErrors.email}
+                    onChange={(e) => setGuestEmail(e.target.value)}
+                  />
+                  {guestErrors.email ? (
+                    <span className="field-error">{guestErrors.email}</span>
+                  ) : (
+                    <span className="field-hint">Your order confirmation and updates go here.</span>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {isGuest && (
+              <div className="address-form">
+                <AddressFields
+                  form={guestAddress}
+                  errors={guestErrors}
+                  onChange={setGuestAddress}
+                  idPrefix="guest-addr"
+                />
+              </div>
+            )}
+
+            {!isGuest && addressList.length === 0 && formMode === 'closed' && (
               <p className="muted" style={{ marginBottom: 12 }}>
                 Add an address to continue.
               </p>
             )}
 
+            {!isGuest && (
+            <>
             <div className="address-options" role="radiogroup" aria-label="Choose a delivery address">
               {addressList.map((address) => (
                 <label
@@ -258,6 +336,8 @@ export default function Checkout() {
                 />
               </div>
             )}
+            </>
+            )}
           </section>
           </Reveal>
 
@@ -284,7 +364,7 @@ export default function Checkout() {
               <button
                 type="button"
                 className="btn btn-primary btn-lg btn-block"
-                disabled={busy || !effectiveSelectedId}
+                disabled={busy || !canPlace}
                 onClick={placeOrder}
               >
                 {phase === 'creating'

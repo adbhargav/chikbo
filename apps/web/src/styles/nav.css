@@ -47,9 +47,8 @@
   will-change: transform;
 }
 
-.nav-drawer-logo {
-  display: inline-flex;
-  align-items: center;
+.wordmark.nav-drawer-logo {
+  font-size: 18px;
 }
 
 .nav-drawer-head {

@@ -391,6 +391,39 @@
 
 /* ---- Buy box head ---- */
 
+.buy-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.buy-share {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink-700, var(--ink-900));
+  background: transparent;
+  border: var(--border-soft);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.buy-share:hover,
+.buy-share:focus-visible {
+  color: var(--brand-600);
+  border-color: var(--brand-600);
+  background: var(--brand-50);
+  outline: none;
+}
+
 .buy-cat {
   display: inline-block;
   font-size: 11px;

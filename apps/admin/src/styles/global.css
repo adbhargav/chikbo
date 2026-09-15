@@ -955,6 +955,18 @@ textarea {
   font-size: 26px;
   letter-spacing: 0.2em;
 }
+.login-title {
+  margin: 4px 0 2px;
+  font-size: 20px;
+  text-align: center;
+}
+
+.login-sub {
+  margin: 0 0 18px;
+  font-size: 13px;
+  text-align: center;
+}
+
 .login-card .heritage {
   color: var(--gold-500);
   font-size: 10.5px;
