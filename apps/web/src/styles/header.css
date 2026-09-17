@@ -41,14 +41,13 @@
   height: 60px;
 }
 
-/* Centred text wordmark (base style lives in tokens.css). */
+/* Centred text wordmark (base style lives in tokens.css). It keeps its size
+   when the bar condenses on scroll, and sits a touch right of true centre so
+   it reads as centred between the nav and the icon cluster. */
 .main-bar .wordmark {
+  --wordmark-shift: 24px;
   justify-self: center;
-  transition: font-size 260ms var(--ease);
-}
-
-.site-header--scrolled .wordmark {
-  font-size: 21px;
+  transform: translateX(var(--wordmark-shift));
 }
 
 /* ------------------------------------------------------ Left-aligned main nav */
@@ -449,8 +448,8 @@
     height: 54px;
   }
 
-  .wordmark,
-  .site-header--scrolled .wordmark {
+  .main-bar .wordmark {
+    --wordmark-shift: 0px;
     font-size: 19px;
   }
 
