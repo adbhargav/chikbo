@@ -10,6 +10,8 @@ export { formatPaise } from '@chikbo/shared';
  */
 export interface CategoryOption {
   id: string;
+  /** Same as id — lets the list feed <CategorySelect> directly. */
+  value: string;
   name: string;
   isChild: boolean;
   /** "Sarees / Pattu Silk" — unambiguous even when the indent is invisible. */
@@ -23,15 +25,15 @@ export function categoryOptions<
   const parents = categories.filter((c) => !c.parentId).sort(bySort);
   const out: CategoryOption[] = [];
   for (const parent of parents) {
-    out.push({ id: parent.id, name: parent.name, isChild: false, path: parent.name });
+    out.push({ id: parent.id, value: parent.id, name: parent.name, isChild: false, path: parent.name });
     for (const child of categories.filter((c) => c.parentId === parent.id).sort(bySort)) {
-      out.push({ id: child.id, name: child.name, isChild: true, path: `${parent.name} / ${child.name}` });
+      out.push({ id: child.id, value: child.id, name: child.name, isChild: true, path: `${parent.name} / ${child.name}` });
     }
   }
   // Orphans (parent missing or inactive) must never vanish from the picker.
   const seen = new Set(out.map((o) => o.id));
   for (const c of categories.filter((c) => !seen.has(c.id)).sort(bySort)) {
-    out.push({ id: c.id, name: c.name, isChild: false, path: c.name });
+    out.push({ id: c.id, value: c.id, name: c.name, isChild: false, path: c.name });
   }
   return out;
 }
@@ -133,3 +135,6 @@ const TONES: Record<string, PillTone> = {
 export function toneForStatus(status: string): PillTone {
   return TONES[status] ?? 'neutral';
 }
+
+/** Public storefront address, for previews and web-address hints. */
+export const STOREFRONT_URL = ((import.meta.env.VITE_WEB_URL as string | undefined) ?? 'http://localhost:5173').replace(/\/+$/, '');

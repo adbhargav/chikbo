@@ -111,10 +111,18 @@ adminOrdersRouter.post(
       throw ApiError.unprocessable('INVALID_TRANSITION', `Cannot move an order from ${order.status} to ${req.body.status}`);
     }
 
+    // Set when the order is cancelled but its automatic refund could not be
+    // started. The cancellation (and restock) still stands; staff retry the
+    // refund from the order page.
+    let refundError: string | null = null;
     if (req.body.status === 'CANCELLED') {
       await releaseOrderStock(order.id, req.body.note ?? 'Cancelled by store');
       if (order.payments.some((p) => p.status === 'CAPTURED')) {
-        await paymentsService.initiateRefund(order.id, undefined, req.body.note ?? 'Cancelled by store', user.id);
+        try {
+          await paymentsService.initiateRefund(order.id, undefined, req.body.note ?? 'Cancelled by store', user.id);
+        } catch (err) {
+          refundError = err instanceof ApiError ? err.message : 'The refund could not be started';
+        }
       }
     } else {
       await prisma.$transaction([
@@ -151,7 +159,8 @@ adminOrdersRouter.post(
         );
       }
     }
-    ok(res, await prisma.order.findUnique({ where: { id: order.id }, include: { statusHistory: true } }));
+    const updated = await prisma.order.findUnique({ where: { id: order.id }, include: { statusHistory: true } });
+    ok(res, { ...updated, refundError });
   }),
 );
 

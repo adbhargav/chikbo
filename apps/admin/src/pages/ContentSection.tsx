@@ -10,6 +10,9 @@ import {
 } from '@chikbo/shared';
 import { api, errorMessage } from '../lib/api';
 import { ImageInput } from '../components/ImageInput';
+import { CategorySelect, type CategoryChoice } from '../components/pickers/CategorySelect';
+import { LinkPicker } from '../components/pickers/LinkPicker';
+import { ProductListPicker } from '../components/pickers/ProductListPicker';
 import type { AdminHomeSection, AdminHomeSectionItem } from '../lib/types';
 import { humanize } from '../lib/format';
 import { useAuth } from '../lib/auth';
@@ -97,10 +100,10 @@ const MEDIA_SPECS: Record<HomeSectionType, { desktop: MediaSpec; mobile: MediaSp
 };
 
 /** Flatten the category tree into "Sarees / Pattu Silk" style options. */
-function flattenCategories(tree: CategoryDto[], prefix = ''): { slug: string; label: string }[] {
+function flattenCategories(tree: CategoryDto[], parent = ''): CategoryChoice[] {
   return tree.flatMap((c) => [
-    { slug: c.slug, label: `${prefix}${c.name}` },
-    ...flattenCategories(c.children ?? [], `${prefix}${c.name} / `),
+    { value: c.slug, name: c.name, isChild: !!parent, path: `${parent}${c.name}` },
+    ...flattenCategories(c.children ?? [], `${parent}${c.name} / `),
   ]);
 }
 
@@ -132,7 +135,7 @@ export function ContentSection() {
   const [source, setSource] = useState<ProductCarouselSource>('newest');
   const [categorySlug, setCategorySlug] = useState('');
   const [limit, setLimit] = useState('12');
-  const [productIds, setProductIds] = useState('');
+  const [productIds, setProductIds] = useState<string[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
   const [rows, setRows] = useState<ItemRow[]>([]);
   const [deleting, setDeleting] = useState<ItemRow | null>(null);
@@ -151,7 +154,7 @@ export function ContentSection() {
     setSource((config.source as ProductCarouselSource | undefined) ?? 'newest');
     setCategorySlug(config.categorySlug ?? '');
     setLimit(String(config.limit ?? 12));
-    setProductIds((config.productIds ?? []).join(', '));
+    setProductIds(config.productIds ?? []);
   }, [section]);
 
   // Items are re-synced whenever the server list changes (add / reorder / delete).
@@ -177,9 +180,7 @@ export function ContentSection() {
               source,
               limit: Number.isFinite(parsedLimit) ? Math.min(Math.max(Math.trunc(parsedLimit), 1), 24) : 12,
               ...(source === 'category' ? { categorySlug } : {}),
-              ...(source === 'manual'
-                ? { productIds: productIds.split(',').map((s) => s.trim()).filter(Boolean) }
-                : {}),
+              ...(source === 'manual' ? { productIds } : {}),
             }
           : null;
       return api<AdminHomeSection>(`/admin/home-sections/${id}`, {
@@ -272,6 +273,10 @@ export function ContentSection() {
     setFormError(null);
     if (type === 'PRODUCT_CAROUSEL' && source === 'category' && !categorySlug) {
       setFormError('Pick a category for this carousel');
+      return;
+    }
+    if (type === 'PRODUCT_CAROUSEL' && source === 'manual' && productIds.length === 0) {
+      setFormError('Add at least one product to show');
       return;
     }
     if (startsAt && endsAt && new Date(endsAt) <= new Date(startsAt)) {
@@ -405,7 +410,7 @@ export function ContentSection() {
                         </div>
                         <div className="form-row cols-2">
                           <div className="field">
-                            <label htmlFor={`c-${row.id}`}>CTA label</label>
+                            <label htmlFor={`c-${row.id}`}>Button text</label>
                             <input
                               id={`c-${row.id}`}
                               type="text"
@@ -415,17 +420,13 @@ export function ContentSection() {
                               disabled={!canWrite}
                             />
                           </div>
-                          <div className="field">
-                            <label htmlFor={`h-${row.id}`}>Link</label>
-                            <input
-                              id={`h-${row.id}`}
-                              type="text"
-                              placeholder="/c/sarees"
-                              value={row.href}
-                              onChange={(e) => setRow(row.id, { href: e.target.value })}
-                              disabled={!canWrite}
-                            />
-                          </div>
+                          <LinkPicker
+                            id={`h-${row.id}`}
+                            value={row.href}
+                            onChange={(href) => setRow(row.id, { href })}
+                            categories={categoryOptions}
+                            disabled={!canWrite}
+                          />
                         </div>
                         {row.mobileImageUrl && (
                           <p className="muted" style={{ fontSize: 12 }}>
@@ -618,33 +619,18 @@ export function ContentSection() {
                 {source === 'category' && (
                   <div className="field">
                     <label htmlFor="sec-cat">Category</label>
-                    <select
+                    <CategorySelect
                       id="sec-cat"
                       value={categorySlug}
-                      onChange={(e) => setCategorySlug(e.target.value)}
+                      onChange={setCategorySlug}
+                      options={categoryOptions}
+                      placeholder="Choose a category…"
                       disabled={!canWrite}
-                    >
-                      <option value="">Choose…</option>
-                      {categoryOptions.map((c) => (
-                        <option key={c.slug} value={c.slug}>
-                          {c.label}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </div>
                 )}
                 {source === 'manual' && (
-                  <div className="field">
-                    <label htmlFor="sec-ids">Product IDs</label>
-                    <textarea
-                      id="sec-ids"
-                      placeholder="cmt0obc…, cmt0obd…"
-                      value={productIds}
-                      onChange={(e) => setProductIds(e.target.value)}
-                      disabled={!canWrite}
-                    />
-                    <span className="hint">Comma-separated product IDs, in the order they should appear.</span>
-                  </div>
+                  <ProductListPicker id="sec-ids" value={productIds} onChange={setProductIds} disabled={!canWrite} />
                 )}
                 <div className="field">
                   <label htmlFor="sec-limit">How many</label>

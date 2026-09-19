@@ -7,6 +7,7 @@
 import axios, { AxiosError, type AxiosInstance } from 'axios';
 import { env } from '../config/env';
 import { logger } from './logger';
+import { ApiError } from '../middleware/error';
 
 const BASE_URL = 'https://apiv2.shiprocket.in/v1/external';
 
@@ -82,7 +83,12 @@ class ShiprocketClient {
   }
 
   private async request<T>(method: 'get' | 'post', path: string, data?: unknown): Promise<T> {
-    if (!this.isConfigured) throw new Error('Shiprocket is not configured (SHIPROCKET_EMAIL/PASSWORD missing)');
+    if (!this.isConfigured) {
+      throw ApiError.unprocessable(
+        'SHIPPING_UNAVAILABLE',
+        'Shiprocket is not connected yet. Add SHIPROCKET_EMAIL and SHIPROCKET_PASSWORD to the API server settings to create shipments.',
+      );
+    }
     const doCall = async (token: string) =>
       this.http.request<T>({ method, url: path, data, headers: { Authorization: `Bearer ${token}` } });
     try {

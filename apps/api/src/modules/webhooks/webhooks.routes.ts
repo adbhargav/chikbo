@@ -90,11 +90,19 @@ webhooksRouter.post('/razorpay', raw({ type: '*/*', limit: '1mb' }), async (req,
   }
 });
 
-webhooksRouter.post('/shiprocket', raw({ type: '*/*', limit: '1mb' }), async (req, res) => {
+// Shiprocket's panel refuses webhook URLs containing "shiprocket", "kartrocket",
+// "sr" or "kr", so the address to register there is /webhooks/courier. The
+// original path keeps working for anything already pointed at it.
+webhooksRouter.post(['/courier', '/shiprocket'], raw({ type: '*/*', limit: '1mb' }), async (req, res) => {
   try {
     if (env.SHIPROCKET_WEBHOOK_TOKEN) {
-      const token = req.headers['x-api-key'] ?? req.headers['x-webhook-token'];
-      if (token !== env.SHIPROCKET_WEBHOOK_TOKEN) {
+      // Shiprocket can send the token as an API-key header or as an
+      // Authorization header (with or without a "Bearer"/"Token" prefix),
+      // depending on the "Auth Token Type" chosen in its panel. Accept all.
+      const one = (h: string | string[] | undefined) => (Array.isArray(h) ? h[0] : h)?.trim();
+      const auth = one(req.headers.authorization)?.replace(/^(Bearer|Token)\s+/i, '');
+      const candidates = [one(req.headers['x-api-key']), one(req.headers['x-webhook-token']), auth];
+      if (!candidates.includes(env.SHIPROCKET_WEBHOOK_TOKEN)) {
         res.status(401).json({ received: false });
         return;
       }

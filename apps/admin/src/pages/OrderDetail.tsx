@@ -43,12 +43,16 @@ function StatusDialog({
 
   const mutate = useMutation({
     mutationFn: () =>
-      api(`/admin/orders/${order.id}/status`, {
+      api<{ refundError?: string | null }>(`/admin/orders/${order.id}/status`, {
         method: 'POST',
         body: { status: target, note: note.trim() || undefined },
       }),
-    onSuccess: () => {
-      toast(`Order marked ${humanize(target).toLowerCase()}`, 'success');
+    onSuccess: (result) => {
+      if (result?.refundError) {
+        toast(`Order cancelled, but the refund did not start: ${result.refundError} Use Refund on this order to retry.`, 'error');
+      } else {
+        toast(`Order marked ${humanize(target).toLowerCase()}`, 'success');
+      }
       queryClient.invalidateQueries({ queryKey: ['order', order.id] });
       queryClient.invalidateQueries({ queryKey: ['orders'] });
       onClose();

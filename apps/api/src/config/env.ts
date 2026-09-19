@@ -39,6 +39,25 @@ const schema = z.object({
 
   FCM_SERVICE_ACCOUNT_JSON: z.string().default(''),
 
+  // Cloudflare R2 (S3-compatible) object storage for uploaded images and
+  // videos. When the four required values are set every upload goes to R2;
+  // otherwise images fall back to Postgres and video uploads are refused.
+  R2_ENDPOINT: z.string().default(''), // https://<account-id>.r2.cloudflarestorage.com
+  R2_ACCESS_KEY_ID: z.string().default(''),
+  R2_SECRET_ACCESS_KEY: z.string().default(''),
+  R2_BUCKET: z.string().default(''),
+  // Optional public base URL for the bucket (r2.dev or a custom domain). When
+  // set, uploads return absolute links there; otherwise the API serves them
+  // at /uploads/... straight from R2.
+  R2_PUBLIC_URL: z.string().default(''),
+
+  // Single-server (VPS) hosting: when set, this process also serves the built
+  // storefront (with SEO head tags per page) and the admin console, so one
+  // domain carries everything. Leave blank when the frontends are hosted
+  // elsewhere or during development.
+  WEB_DIST_DIR: z.string().default(''), // e.g. /var/www/chikbo/apps/web/dist
+  ADMIN_DIST_DIR: z.string().default(''), // e.g. /var/www/chikbo/apps/admin/dist/admin
+
   /**
    * Firebase Authentication (Google sign-in via Firebase). Server-side
    * verification uses the FCM service account above; this public Web API Key

@@ -157,7 +157,29 @@ export function assetUrl(url: string | null | undefined): string | null {
   return `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
 }
 
+/** "variants › 1 › discountPriceInPaise: Number must be…" for each rejected field. */
+function validationDetail(details: unknown): string {
+  const d = details as {
+    issues?: { path: (string | number)[]; message: string }[];
+    fieldErrors?: Record<string, string[] | undefined>;
+  } | null;
+  if (d?.issues?.length) {
+    return d.issues
+      .slice(0, 3)
+      .map((i) => `${i.path.map((seg) => (typeof seg === 'number' ? seg + 1 : seg)).join(' › ')}: ${i.message}`)
+      .join('; ');
+  }
+  return Object.entries(d?.fieldErrors ?? {})
+    .slice(0, 3)
+    .map(([field, msgs]) => `${field}: ${(msgs ?? []).join(', ')}`)
+    .join('; ');
+}
+
 export function errorMessage(err: unknown): string {
+  if (err instanceof ApiClientError && err.code === 'VALIDATION_ERROR') {
+    const detail = validationDetail(err.details);
+    return detail ? `${err.message} — ${detail}` : err.message;
+  }
   if (err instanceof ApiClientError) return err.message;
   if (err instanceof Error) return err.message;
   return 'Something went wrong';

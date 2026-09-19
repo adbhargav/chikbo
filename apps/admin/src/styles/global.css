@@ -666,6 +666,9 @@ textarea {
 .toolbar select {
   width: auto;
 }
+.toolbar .catselect {
+  width: 240px;
+}
 .toolbar .spacer {
   flex: 1;
 }
@@ -2272,4 +2275,580 @@ textarea {
   margin-top: 18px;
   padding-top: 16px;
   border-top: 1px solid rgba(185, 178, 169, 0.32);
+}
+
+/* ============================================================ small screens
+   Below 900px the sidebar becomes an off-canvas drawer opened from the top
+   bar, content takes the full width, multi-column forms stack, and wide
+   tables scroll sideways inside their card instead of crushing columns. */
+.nav-toggle {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    height: 100dvh;
+    z-index: 70;
+    width: min(280px, 84vw);
+    flex: none;
+    transform: translateX(-105%);
+    transition: transform 220ms var(--ease-out);
+    box-shadow: none;
+  }
+  .sidebar.sidebar--open {
+    transform: translateX(0);
+    box-shadow: 0 0 40px rgba(26, 23, 20, 0.25);
+  }
+  .nav-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 65;
+    background: rgba(26, 23, 20, 0.38);
+    animation: fade-in var(--t-med) var(--ease-out);
+  }
+  .nav-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin-left: -8px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--ink-900);
+    cursor: pointer;
+    flex: none;
+  }
+  .nav-toggle:hover {
+    background: var(--cream-100);
+  }
+  .topbar {
+    padding: 0 14px;
+    gap: 10px;
+  }
+  .topbar-title {
+    font-size: 17px;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .topbar-user {
+    gap: 8px;
+  }
+  .topbar-user .who {
+    display: none;
+  }
+  .page {
+    padding: 18px 14px 40px;
+  }
+  .page-head {
+    align-items: flex-start;
+  }
+  .page-head h1 {
+    font-size: 22px;
+  }
+  .page-head > div:last-child:not(:first-child) {
+    flex-wrap: wrap;
+  }
+  .form-row.cols-2,
+  .form-row.cols-3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .toolbar > input,
+  .toolbar > select,
+  .toolbar > .catselect,
+  .toolbar input[type='search'],
+  .toolbar input[type='text'],
+  .toolbar input[type='date'] {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+  .table-wrap {
+    max-height: none;
+  }
+  .table-wrap .table {
+    min-width: 640px;
+  }
+  .table td.primary {
+    white-space: nowrap;
+  }
+  .modal-body,
+  .modal-head,
+  .modal-foot {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
+
+/* Web address field: the store's domain shown as a fixed prefix, then the
+   editable part. Reads like the link a shopper sees, not a technical "slug". */
+.webaddr {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  background: #fff;
+  border: 1px solid var(--ink-300, #cfc8bd);
+  border-radius: 10px;
+  overflow: hidden;
+  transition: border-color var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out);
+}
+.webaddr:focus-within {
+  border-color: var(--brand-600);
+  box-shadow: 0 0 0 3px rgba(234, 122, 18, 0.15);
+}
+.webaddr-prefix {
+  display: flex;
+  align-items: center;
+  padding: 0 4px 0 12px;
+  background: var(--cream-100);
+  color: var(--ink-500);
+  font-size: 13.5px;
+  white-space: nowrap;
+  max-width: 55%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-right: 1px solid rgba(185, 178, 169, 0.45);
+}
+.webaddr input {
+  flex: 1;
+  min-width: 0;
+  border: 0 !important;
+  box-shadow: none !important;
+  border-radius: 0;
+  background: transparent;
+}
+.webaddr--disabled {
+  background: var(--cream-100);
+}
+.webaddr--disabled input {
+  color: var(--ink-500);
+}
+
+/* ---- pickers: link destination, product search, hand-picked list ---- */
+.linkpick select + select,
+.linkpick select + .catselect,
+.linkpick select + .psearch,
+.linkpick select + .linkpick-chosen,
+.linkpick select + input {
+  margin-top: 8px;
+}
+.linkpick-chosen {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border: var(--border-hairline);
+  border-radius: 10px;
+  background: #fff;
+}
+.linkpick-chosen-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* ---- size chips on the product form (same look as the storefront filter) ---- */
+.sizepick {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.sizepick-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.sizepick-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-700);
+}
+.sizepick .hint,
+.sizepick-none {
+  font-size: 12px;
+  color: var(--ink-500);
+}
+.sizepick-none {
+  margin-bottom: 14px;
+}
+.sizepick-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.size-chip {
+  min-width: 44px;
+  height: 36px;
+  padding: 0 14px;
+  border: 1px solid var(--ink-300);
+  border-radius: var(--radius-pill);
+  background: #fff;
+  color: var(--ink-700);
+  font-size: 13.5px;
+  font-weight: 500;
+  transition: background var(--t-fast) var(--ease-out), border-color var(--t-fast) var(--ease-out),
+    color var(--t-fast) var(--ease-out);
+}
+.size-chip:hover:not(:disabled) {
+  border-color: var(--ink-900);
+}
+.size-chip[aria-pressed='true'] {
+  background: var(--ink-900);
+  border-color: var(--ink-900);
+  color: #fff;
+}
+.size-chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+.sizepick-custom {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.sizepick-custom input {
+  width: 110px;
+  height: 36px;
+  border-radius: var(--radius-pill);
+  padding: 0 14px;
+  font-size: 13px;
+}
+
+/* ---- category dropdown (replaces the native <select>, which opens as a
+   screen-tall list once there are a few dozen subcategories) ---- */
+.catselect {
+  position: relative;
+  min-width: 0;
+}
+.catselect-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink-900);
+  background: #fff;
+  border: 1px solid var(--ink-300);
+  border-radius: var(--radius-input);
+  padding: 8px 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease-out), box-shadow var(--t-fast) var(--ease-out);
+}
+.catselect-trigger:hover:not(:disabled) {
+  border-color: var(--ink-500);
+}
+.catselect-trigger:focus-visible,
+.catselect.is-open .catselect-trigger {
+  outline: none;
+  border-color: var(--brand-600);
+  box-shadow: 0 0 0 3px rgba(234, 122, 18, 0.15);
+}
+.catselect-trigger:disabled {
+  background: var(--cream-100);
+  color: var(--ink-500);
+  cursor: not-allowed;
+}
+.catselect-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.catselect-value.is-placeholder {
+  color: var(--ink-500);
+}
+.catselect-caret {
+  flex: none;
+  color: var(--ink-500);
+  transition: transform var(--t-fast) var(--ease-out);
+}
+.catselect.is-open .catselect-caret {
+  transform: rotate(180deg);
+}
+.catselect-panel {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 100%;
+  min-width: 260px;
+  max-width: calc(100vw - 32px);
+  background: #fff;
+  border: var(--border-hairline);
+  border-radius: 12px;
+  box-shadow: var(--shadow-pop);
+  overflow: hidden;
+  animation: pop-in var(--t-fast) var(--ease-out);
+}
+.catselect.is-up .catselect-panel {
+  top: auto;
+  bottom: calc(100% + 6px);
+}
+.catselect-panel .catselect-search {
+  width: 100%;
+  border: 0;
+  border-bottom: var(--border-hairline);
+  border-radius: 0;
+  padding: 10px 14px;
+  font-size: 13.5px;
+  box-shadow: none;
+}
+.catselect-panel .catselect-search:focus {
+  box-shadow: none;
+  border-color: rgba(185, 178, 169, 0.4);
+}
+.catselect-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  max-height: 280px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.catselect-list:focus {
+  outline: none;
+}
+.catselect-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  color: var(--ink-700);
+  cursor: pointer;
+  scroll-margin: 4px;
+}
+.catselect-option.is-parent {
+  font-weight: 600;
+  color: var(--ink-900);
+}
+.catselect-option.is-child {
+  padding-left: 26px;
+}
+.catselect-option[data-active='true'] {
+  background: var(--cream-100);
+}
+.catselect-option[aria-selected='true'] {
+  color: var(--brand-700);
+}
+.catselect-option svg {
+  flex: none;
+}
+.catselect-option-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.catselect-empty {
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--ink-500);
+}
+.psearch {
+  position: relative;
+}
+.psearch input {
+  width: 100%;
+}
+.psearch-results {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 4px;
+  border: var(--border-hairline);
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: var(--shadow-pop);
+  max-height: 280px;
+  overflow-y: auto;
+}
+.psearch-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  font: inherit;
+}
+.psearch-option:hover,
+.psearch-option:focus-visible {
+  background: var(--cream-100);
+}
+.psearch-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+}
+.psearch-empty {
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--ink-500);
+}
+.psearch-tag {
+  margin-left: 8px;
+  font-size: 11px;
+  color: var(--ink-500);
+  background: var(--cream-100);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+.plist {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.plist-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border: var(--border-hairline);
+  border-radius: 10px;
+  background: #fff;
+}
+.plist-n {
+  width: 18px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-500);
+}
+.plist-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+}
+.plist-actions {
+  display: flex;
+  gap: 2px;
+}
+
+/* variant colour cell: swatch dot beside the name */
+.colour-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.colour-cell input {
+  min-width: 0;
+}
+.colour-dot {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(26, 23, 20, 0.12);
+}
+.colour-dot--light {
+  border-color: rgba(26, 23, 20, 0.3);
+}
+
+/* Photos grouped by colour */
+.photo-group {
+  padding: 12px 0 14px;
+  border-top: var(--border-hairline);
+}
+.photo-group:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+.photo-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.photo-cell {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--cream-100);
+  border: var(--border-hairline);
+}
+.photo-cell img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.photo-main {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: center;
+  padding: 3px 0;
+  background: rgba(234, 122, 18, 0.92);
+  color: #fff;
+}
+.photo-remove,
+.photo-first {
+  position: absolute;
+  top: 4px;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(253, 251, 247, 0.92);
+  color: var(--ink-900);
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.photo-remove {
+  right: 4px;
+}
+.photo-first {
+  left: 4px;
+  color: var(--brand-600);
+}
+.photo-first:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.colour-cell input {
+  width: 140px;
 }

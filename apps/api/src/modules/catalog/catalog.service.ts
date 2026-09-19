@@ -212,7 +212,7 @@ export async function getProductBySlug(slug: string): Promise<ProductDetailDto> 
     badge: p.badge,
     description: p.description,
     attributes: (p.attributes as Record<string, string> | null) ?? null,
-    images: p.images.map((img) => ({ id: img.id, url: img.url, alt: img.alt, sortOrder: img.sortOrder })),
+    images: p.images.map((img) => ({ id: img.id, url: img.url, alt: img.alt, color: img.color ?? null, sortOrder: img.sortOrder })),
     variants: active.map((v) => ({
       id: v.id,
       sku: v.sku,
@@ -232,4 +232,18 @@ export async function getProductBySlug(slug: string): Promise<ProductDetailDto> 
     ratingCount: p.ratingCount,
     inStock: listItem.inStock,
   };
+}
+
+/**
+ * The photo to show for a specific colour: the first image tagged with that
+ * colour, else the first untagged image, else the product's first image.
+ * Images must already be ordered by sortOrder.
+ */
+export function thumbnailFor(images: { url: string; color?: string | null }[], color: string | null | undefined): string | null {
+  const want = color?.trim().toLowerCase();
+  if (want) {
+    const match = images.find((i) => i.color?.trim().toLowerCase() === want);
+    if (match) return match.url;
+  }
+  return (images.find((i) => !i.color) ?? images[0])?.url ?? null;
 }

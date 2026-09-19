@@ -210,6 +210,9 @@ model Category {
   imageAlt  String?
   sortOrder Int        @default(0)
   isActive  Boolean    @default(true)
+  /// Size chart for products here (SIZE_TYPES in @chikbo/shared): "clothing",
+  /// "waist", "none"… Null = use the parent category's, else the default.
+  sizeType  String?
 
   /// SEO overrides — same runtime-fallback contract as Product.
   seoTitle       String?
@@ -276,6 +279,8 @@ model ProductImage {
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   url       String
   alt       String?
+  /// Colour this photo shows (matches a variant's colour name). Null = every colour.
+  color     String?
   sortOrder Int     @default(0)
 
   @@index([productId])
@@ -767,4 +772,21 @@ model AuditLog {
 
   @@index([actorId, createdAt])
   @@index([entity, entityId])
+}
+
+/// Uploaded images (product photos, banners, category art, return evidence).
+/// Kept in Postgres rather than on the API host's disk: the host's filesystem
+/// is wiped on every redeploy, so disk-stored uploads silently disappear.
+/// Served at /uploads/<filename>; images committed to the repo under
+/// apps/api/uploads are still served from disk first.
+model StoredImage {
+  id        String   @id @default(cuid())
+  /// Unique, unguessable public file name, e.g. 1789...-9f2c1a.webp
+  filename  String   @unique
+  mimeType  String
+  bytes     Bytes
+  size      Int
+  width     Int?
+  height    Int?
+  createdAt DateTime @default(now())
 }

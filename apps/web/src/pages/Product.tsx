@@ -19,6 +19,7 @@ import { useToast } from '../lib/toast';
 import { useCartUi } from '../lib/cart-ui';
 import { swatchFor } from '../lib/colors';
 import { usePageMeta } from '../lib/usePageMeta';
+import { useRedirectIfMoved } from '../lib/redirects';
 import { absoluteUrl, canonicalFor, clampText, productSchema } from '../lib/seo';
 import { assetUrl, formatDate, percentOff } from '../lib/format';
 import { humanizeSlug, productBadge } from '../lib/catalog';
@@ -236,7 +237,9 @@ function ReviewsSection({ product }: { product: ProductDetailDto }) {
 
 export default function Product() {
   const { slug } = useParams();
-  const { data: product, isPending, isError, refetch } = useProduct(slug);
+  const { data: product, isPending, isError, error, refetch } = useProduct(slug);
+  // A renamed product's old URL forwards to its new one.
+  const checkingRedirect = useRedirectIfMoved(isError && error instanceof ApiError && error.status === 404);
   // Already in the query cache — Layout fetches it for the header nav.
   const { data: categories } = useCategories();
   const { user } = useAuth();
@@ -304,6 +307,21 @@ export default function Product() {
     [product],
   );
 
+  // Photos tagged with the chosen colour (plus untagged ones). If nothing is
+  // tagged for this colour, show every photo rather than an empty gallery.
+  const imagesForColor = useMemo(() => {
+    const want = color?.trim().toLowerCase();
+    if (!want) return sortedImages;
+    const tagged = sortedImages.filter((img) => img.color?.trim().toLowerCase() === want);
+    if (tagged.length === 0) return sortedImages;
+    return [...tagged, ...sortedImages.filter((img) => !img.color)];
+  }, [sortedImages, color]);
+
+  // A new colour starts on its first photo.
+  useEffect(() => {
+    setImageIndex(0);
+  }, [color]);
+
   usePageMeta(product?.name, product ? clampText(product.description, 155) : undefined, {
     ogImage: sortedImages[0]?.url ?? null,
     ogType: 'product',
@@ -328,6 +346,10 @@ export default function Product() {
     );
   }
 
+  if (checkingRedirect) {
+    return <div className="container page" aria-busy="true" style={{ minHeight: '60vh' }} />;
+  }
+
   if (isError || !product) {
     return (
       <div className="container page">
@@ -336,7 +358,7 @@ export default function Product() {
     );
   }
 
-  const images = sortedImages;
+  const images = imagesForColor;
   const mainImage = images[imageIndex] ?? images[0] ?? null;
   const price = selected ? variantPrice(selected) : (product.minDiscountPriceInPaise ?? product.minPriceInPaise);
   const mrp = selected

@@ -97,18 +97,26 @@ Order statuses: PENDING, CONFIRMED, PROCESSING, SHIPPED, OUT_FOR_DELIVERY, DELIV
 - `POST /reviews` `{productId, rating 1-5, title?, body?}` (upserts own review; verifiedPurchase auto-set)
 - `DELETE /reviews/:id`
 
+## Redirects (public)
+- `GET /seo/redirect?path=/p/old-slug` → `{destination, statusCode}` or `{destination: null}`. Admin redirects, including the automatic ones recorded when a product or category slug changes, follow short chains. The storefront calls this when a product, category or route is not found and replaces the URL.
+
 ## Uploads (auth)
-- `POST /uploads` multipart field `files` (≤6 images ≤5MB; jpeg/png/webp/avif) → `[{url, size}]`. URLs are server-relative (`/uploads/...`) — prefix with the API origin when rendering.
+- `POST /uploads` multipart field `files` (≤6 files; images jpeg/png/webp/avif ≤5MB, videos mp4/webm/mov ≤100MB) → `[{url, size, kind: 'image'|'video'}]`. URLs are server-relative (`/uploads/...`) — prefix with the API origin when rendering — or absolute when `R2_PUBLIC_URL` is set.
+- `POST /uploads/from-url` `{url}` → `{url, size}` — downloads and stores the image rather than hot-linking it. Slow or failing sources return 422 `IMPORT_TIMEOUT` or 400 with a readable message.
+- Storage: Cloudflare R2, bucket key `uploads/<file>`. Images are auto-rotated, scaled to fit 2000px and re-encoded as WebP; videos are stored as uploaded after a container-signature check. Without R2 credentials (local dev) images fall back to Postgres (`StoredImage`) and videos are refused with 422 `STORAGE_UNAVAILABLE`.
+- `GET /uploads/<path>` serves from R2 first, then repo-committed files, then Postgres, with a one-year immutable cache header and byte-range support (206) for video seeking.
+- `scripts/migrate-uploads-to-r2.ts` copies repo-committed and database images into R2; safe to re-run.
 
 ## Admin (auth + STAFF/SUPER_ADMIN + RBAC permission)
 All under `/admin`. 403 body includes the missing permission.
 - `GET /admin/dashboard` (dashboard.view) → `{ordersToday, revenueTodayInPaise, revenueMonthInPaise, pendingShipments, openReturns, lowStockCount, customers, recentOrders}`
 - `GET /admin/reports/sales?days=30` (reports.read) → `{daily[], bestSellers[], byCategory[]}`
 - Categories: `GET/POST /admin/categories`, `PATCH/DELETE /admin/categories/:id` (products.read / categories.write)
-- Products: `GET /admin/products?page&search&categoryId`, `POST /admin/products` (name, slug, description, categoryId, attributes?, badge?, images[{url,alt}], variants[{sku, size?, color?, weightGrams?, priceInPaise, discountPriceInPaise?, stockQty, lowStockThreshold?}]), `PATCH /admin/products/:id` (same fields incl. `badge`), `POST /admin/products/:id/variants`, `PATCH /admin/variants/:id` (stock changes go through inventory adjust, not variant patch)
+  - `sizeType` (`clothing` | `waist` | `footwear` | `kids` | `free` | `none`, nullable): the size chart the admin product form offers for this category. Null inherits the parent category's, else `clothing`. Charts live in `SIZE_CHARTS` (`@chikbo/shared`).
+- Products: `GET /admin/products?page&search&categoryId`, `POST /admin/products` (name, slug, description, categoryId, attributes?, badge?, images[{url, alt?, color?}], variants[{sku, size?, color?, weightGrams?, priceInPaise, discountPriceInPaise?, stockQty, lowStockThreshold?}]) — `images[].color` names the variant colour a photo shows (null = every colour); the storefront gallery, bag and order thumbnails pick photos by the chosen colour, `PATCH /admin/products/:id` (same fields incl. `badge`), `DELETE /admin/products/:id` (only for products never ordered — 409 otherwise; hide with `isActive:false` instead), `POST /admin/products/:id/variants`, `PATCH /admin/variants/:id` (stock changes go through inventory adjust, not variant patch)
 - Inventory: `GET /admin/inventory/low-stock`, `POST /admin/inventory/adjust` `{variantId, delta, reason: MANUAL_ADJUSTMENT|RESTOCK|CORRECTION|RETURN_RECEIVED, note?}`, `GET /admin/inventory/history/:variantId`
-- Orders: `GET /admin/orders?page&status&search&from&to`, `GET /admin/orders/:id` (full detail incl. payments, shipments, history), `POST /admin/orders/:id/status` `{status: PROCESSING|SHIPPED|OUT_FOR_DELIVERY|DELIVERED|CANCELLED, note?}`
-- Shipments: `POST /admin/orders/:id/shipment` (creates in Shiprocket), `POST /admin/shipments/:id/awb` `{courierId?}`, `GET /admin/shipments`
+- Orders: `GET /admin/orders?page&status&search&from&to`, `GET /admin/orders/:id` (full detail incl. payments, shipments, history), `POST /admin/orders/:id/status` `{status: PROCESSING|SHIPPED|OUT_FOR_DELIVERY|DELIVERED|CANCELLED, note?}` → the order plus `refundError` (string when a cancelled paid order's automatic refund could not start; the cancellation still stands — retry with the refund endpoint)
+- Shipments: `POST /admin/orders/:id/shipment` (creates in Shiprocket; 422 `SHIPPING_UNAVAILABLE` when Shiprocket credentials are not set), `POST /admin/shipments/:id/awb` `{courierId?}`, `GET /admin/shipments`
 - Returns: `GET /admin/returns?status`, `POST /admin/returns/:id/decision` `{decision: APPROVED|REJECTED, adminNote?}`, `POST /admin/returns/:id/received` `{restock}`
 - Refunds: `POST /admin/orders/:id/refund` `{amountInPaise?, reason, returnRequestId?}`
 - Payments: `GET /admin/payments?status`

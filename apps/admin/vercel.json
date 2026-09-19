@@ -3,11 +3,23 @@
   "installCommand": "cd ../.. && npm install",
   "build": {
     "env": {
-      "VITE_API_URL": "https://chikbo.onrender.com"
+      "VITE_API_URL": "https://chikbo.com",
+      "VITE_WEB_URL": "https://chikbo.com"
     }
   },
   "buildCommand": "cd ../.. && npm run build --workspace packages/shared && npm run build --workspace apps/admin",
   "outputDirectory": "dist",
-  "redirects": [{ "source": "/", "destination": "/admin/login", "permanent": false }],
-  "rewrites": [{ "source": "/admin/((?!assets/|brand/).*)", "destination": "/admin/index.html" }]
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/admin/login",
+      "permanent": false
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/admin/((?!assets/|brand/).*)",
+      "destination": "/admin/index.html"
+    }
+  ]
 }

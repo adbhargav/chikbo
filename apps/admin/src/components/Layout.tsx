@@ -1,8 +1,10 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import type { Permission } from '@chikbo/shared';
 import { useAuth } from '../lib/auth';
 import { humanize } from '../lib/format';
 import { Icon } from './Icon';
+import { ErrorBoundary } from './ErrorBoundary';
 
 export interface NavEntry {
   to: string;
@@ -32,6 +34,26 @@ export const NAV_ENTRIES: NavEntry[] = [
 export function Layout() {
   const { user, logout, hasPermission } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  // Phones and small tablets: the sidebar is an off-canvas drawer.
+  const [navOpen, setNavOpen] = useState(false);
+
+  useEffect(() => {
+    setNavOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    if (!navOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setNavOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = '';
+    };
+  }, [navOpen]);
 
   const visible = NAV_ENTRIES.filter((e) => hasPermission(e.permission));
   const roleLabel = user?.role === 'SUPER_ADMIN' ? 'Super Admin' : humanize(user?.role ?? 'STAFF');
@@ -48,7 +70,8 @@ export function Layout() {
 
   return (
     <div className="shell">
-      <aside className="sidebar">
+      {navOpen && <div className="nav-backdrop" onClick={() => setNavOpen(false)} aria-hidden="true" />}
+      <aside className={`sidebar${navOpen ? ' sidebar--open' : ''}`} id="admin-sidebar">
         <div className="sidebar-brand">
           <img src={`${import.meta.env.BASE_URL}brand/chikbo-logo.png`} alt="Chikbo" className="sidebar-logo" style={{ height: 38, width: 'auto', objectFit: 'contain' }} />
           <div className="sidebar-tagline">Admin · Since 1992</div>
@@ -73,6 +96,18 @@ export function Layout() {
 
       <div className="main">
         <header className="topbar">
+          <button
+            type="button"
+            className="nav-toggle"
+            aria-label={navOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={navOpen}
+            aria-controls="admin-sidebar"
+            onClick={() => setNavOpen((open) => !open)}
+          >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+          </button>
           <div className="topbar-title">Chikbo Studio</div>
           <div className="topbar-user">
             <div className="who">
@@ -87,7 +122,9 @@ export function Layout() {
             </button>
           </div>
         </header>
-        <Outlet />
+        <ErrorBoundary resetKey={location.pathname}>
+          <Outlet />
+        </ErrorBoundary>
       </div>
     </div>
   );

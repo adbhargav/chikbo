@@ -7,7 +7,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../../lib/prisma';
-import { asyncHandler } from '../../middleware/error';
+import { asyncHandler, ok } from '../../middleware/error';
 import { validate } from '../../middleware/validate';
 import { getCanonicalUrl, isNoindexPath, siteOrigin } from './seo.config';
 import { getSeoSettings } from './seo.service';
@@ -134,6 +134,42 @@ seoPublicRouter.get(
  * Inspect exactly what a crawler receives for a path. Public and read-only —
  * it exposes nothing that isn't already in the page's <head>.
  */
+/**
+ * Redirect lookup for the client-rendered storefront.
+ *
+ * The storefront is a static SPA, so a request for a renamed product or
+ * category never reaches the server. When a page cannot find what it was
+ * asked for, it asks here whether an admin redirect (manual, or the automatic
+ * one recorded on a slug change) covers the path, and navigates there.
+ */
+seoPublicRouter.get(
+  '/api/v1/seo/redirect',
+  validate({
+    query: z.object({
+      path: z
+        .string()
+        .max(2048)
+        .refine((v) => v.startsWith('/') && !v.startsWith('//'), { message: 'Must be a site-relative path' }),
+    }),
+  }),
+  asyncHandler(async (req, res) => {
+    const raw = String((req.query as { path: string }).path).split('?')[0].split('#')[0];
+    const path = raw.length > 1 ? raw.replace(/\/+$/, '') : raw;
+    let cursor = path;
+    let statusCode = 301;
+    // Follow short chains (a product renamed twice) but never loop.
+    for (let hop = 0; hop < 5; hop++) {
+      const hit = await prisma.redirect.findUnique({ where: { source: cursor } });
+      if (!hit || !hit.isActive) break;
+      if (hop === 0) statusCode = hit.statusCode;
+      void prisma.redirect.update({ where: { id: hit.id }, data: { hits: { increment: 1 } } }).catch(() => undefined);
+      cursor = hit.destination;
+      if (cursor === path) break;
+    }
+    ok(res, cursor !== path ? { destination: cursor, statusCode } : { destination: null, statusCode: null });
+  }),
+);
+
 seoPublicRouter.get(
   '/api/v1/seo/head',
   validate({ query: z.object({ path: z.string().max(2048).default('/') }) }),

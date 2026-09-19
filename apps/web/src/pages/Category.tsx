@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 import type { CategoryDto } from '@chikbo/shared';
 import { useCategories } from '../lib/queries';
 import { usePageMeta } from '../lib/usePageMeta';
+import { useRedirectIfMoved } from '../lib/redirects';
 import { absoluteUrl, canonicalFor, collectionPageSchema } from '../lib/seo';
 import { ProductListing } from '../components/ProductListing';
 import { Breadcrumbs, JsonLd } from '../components/ui';
@@ -31,6 +32,8 @@ export default function Category() {
     () => (categories ? findCategory(categories, slug) : null),
     [categories, slug],
   );
+  // A renamed category's old URL forwards to its new one.
+  const checkingRedirect = useRedirectIfMoved(!!categories && !found);
 
   const title = found?.category.name ?? 'Collection';
   const description = `Shop ${title} at Chikbo — premium quality, budget friendly, free delivery over ₹999.`;
@@ -53,6 +56,10 @@ export default function Category() {
     const url = absoluteUrl(`/c/${child.slug}`);
     return url ? [{ name: child.name, url }] : [];
   });
+
+  if (checkingRedirect) {
+    return <div className="container page" aria-busy="true" style={{ minHeight: '60vh' }} />;
+  }
 
   return (
     <div className="container page">

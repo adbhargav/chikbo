@@ -66,16 +66,15 @@ The admin app is served under the `/admin` prefix (Vite `base` + router
 storefront's customer `/login`:
 
 - Local: `http://localhost:5174/admin/login`
-- Deployed on its own Vercel project (`apps/admin/vercel.json`): `https://<admin-project>.vercel.app/admin/login`
-  (the bare origin redirects there).
-- To expose it on the storefront domain instead, add a rewrite to
-  `apps/web/vercel.json` once the admin project URL is known:
-  `{ "source": "/admin/:path*", "destination": "https://<admin-project>.vercel.app/admin/:path*" }`
-  and include that domain in the API's `CORS_ORIGINS`.
+- Production: `https://chikbo.com/admin/login` — served from the same server
+  as the storefront (see [docs/vps-deployment.md](docs/vps-deployment.md)).
 
 ## Tests & builds
 
 ```bash
+npm run test:admin-e2e --workspace apps/api  # drives every admin operation against a running API
+                                             # and checks the storefront reflects it; creates and
+                                             # removes its own temporary data (see the script header)
 npm test          # API unit tests (pricing engine, Razorpay signatures)
 npm run typecheck # strict TypeScript across all workspaces
 npm run build     # production builds: shared, api, web, admin
@@ -161,12 +160,12 @@ npm run build     # production builds: shared, api, web, admin
 
 1. **Razorpay**: create the merchant account, put `RAZORPAY_KEY_ID`,
    `RAZORPAY_KEY_SECRET` in the API env; configure a webhook to
-   `https://api.<domain>/api/v1/webhooks/razorpay` with events
+   `https://chikbo.com/api/v1/webhooks/razorpay` with events
    `payment.captured`, `payment.failed`, `refund.processed` and set
    `RAZORPAY_WEBHOOK_SECRET`.
 2. **Shiprocket**: create an API user, set `SHIPROCKET_EMAIL`/`PASSWORD` and
    the pickup location name; point the tracking webhook to
-   `https://api.<domain>/api/v1/webhooks/shiprocket` and set a shared
+   `https://chikbo.com/api/v1/webhooks/courier` and set a shared
    `SHIPROCKET_WEBHOOK_TOKEN` (sent as `x-api-key`).
 3. **Database**: managed PostgreSQL, `npm run prisma:deploy --workspace apps/api`.
 4. **Secrets**: generate long random JWT secrets; rotate the seeded admin
@@ -178,11 +177,11 @@ npm run build     # production builds: shared, api, web, admin
    production origins, set `GOOGLE_CLIENT_ID`, and set `WEB_APP_URL` to the
    public storefront URL so reset links point at the right host — see
    [docs/google-auth-setup.md](docs/google-auth-setup.md).
-7. **Uploads**: local `/uploads` works out of the box; for scale swap the
-   multer storage engine for S3/Cloudinary (single file:
-   `apps/api/src/modules/uploads/uploads.routes.ts`).
-8. Serve web/admin builds behind a CDN; set `VITE_API_URL`, and add the final
-   origins to `CORS_ORIGINS`.
+7. **Uploads**: photos and videos go to Cloudflare R2 — set the `R2_*`
+   variables (see `apps/api/.env.example`).
+8. **Hosting**: one VPS serves the storefront, admin and API on
+   `chikbo.com` behind Nginx — follow
+   [docs/vps-deployment.md](docs/vps-deployment.md).
 
 ## Business profile
 

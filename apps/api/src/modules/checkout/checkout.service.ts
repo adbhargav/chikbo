@@ -9,6 +9,7 @@ import type { CartOwner } from '../../middleware/guest';
 import { computeTotals, effectiveUnitPrice, type CouponRule } from '../../utils/pricing';
 import { generateOrderNumber } from '../../utils/orderNumber';
 import { getValidCoupon, ownerWhere, type CouponIdentity } from '../cart/cart.service';
+import { thumbnailFor } from '../catalog/catalog.service';
 
 /** Who is checking out: an account holder, or a guest identified by cart token + email. */
 export type CheckoutActor =
@@ -65,7 +66,7 @@ export async function createCheckout(actor: CheckoutActor, input: CheckoutCreate
     async (tx) => {
       const cartItems = await tx.cartItem.findMany({
         where: ownerWhere(owner),
-        include: { variant: { include: { product: { include: { images: { orderBy: { sortOrder: 'asc' }, take: 1 } } } } } },
+        include: { variant: { include: { product: { include: { images: { orderBy: { sortOrder: 'asc' } } } } } } },
       });
       const usable = cartItems.filter((c) => c.variant.isActive && c.variant.product.isActive);
       if (usable.length === 0) throw ApiError.badRequest('Your cart is empty');
@@ -136,7 +137,7 @@ export async function createCheckout(actor: CheckoutActor, input: CheckoutCreate
               sku: c.variant.sku,
               size: c.variant.size,
               color: c.variant.color,
-              thumbnailUrl: c.variant.product.images[0]?.url ?? null,
+              thumbnailUrl: thumbnailFor(c.variant.product.images, c.variant.color),
               unitPriceInPaise: effectiveUnitPrice(c.variant),
               qty: c.qty,
               lineTotalInPaise: effectiveUnitPrice(c.variant) * c.qty,
@@ -243,7 +244,8 @@ function buildResponse(
     razorpayKeyId: env.RAZORPAY_KEY_ID,
     amountInPaise: order.totalInPaise,
     currency: 'INR',
-    prefill: { name: order.shipFullName, email, contact: order.shipPhone },
+    // Razorpay pre-fills the phone only when it carries the country code.
+    prefill: { name: order.shipFullName, email, contact: /^\d{10}$/.test(order.shipPhone) ? `+91${order.shipPhone}` : order.shipPhone },
   };
 }
 

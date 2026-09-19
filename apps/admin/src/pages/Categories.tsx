@@ -1,9 +1,12 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { DEFAULT_SIZE_TYPE, SIZE_CHARTS, SIZE_TYPES, type SizeType } from '@chikbo/shared';
 import { api, assetUrl, errorMessage } from '../lib/api';
 import type { AdminCategory } from '../lib/types';
 import { slugify } from '../lib/format';
+import { WebAddressField, webAddressError } from '../components/WebAddressField';
 import { useToast } from '../components/Toast';
+import { CategorySelect } from '../components/pickers/CategorySelect';
 import { ConfirmDialog, Modal } from '../components/Modal';
 import { CardSkeleton, EmptyState, ErrorState, PageHead, Pill } from '../components/ui';
 import { ImageInput } from '../components/ImageInput';
@@ -26,6 +29,8 @@ interface CategoryFormState {
   sortOrder: string;
   imageUrl: string;
   isActive: boolean;
+  /** '' = same as the main category (or the default, for a main category). */
+  sizeType: SizeType | '';
   seo: SeoValues;
 }
 
@@ -36,6 +41,7 @@ const emptyForm = (): CategoryFormState => ({
   sortOrder: '0',
   imageUrl: '',
   isActive: true,
+  sizeType: '',
   seo: emptySeoValues(),
 });
 
@@ -91,6 +97,7 @@ export function Categories() {
         sortOrder: Math.max(0, Number(state.sortOrder) || 0),
         imageUrl: state.imageUrl.trim() || null,
         isActive: state.isActive,
+        sizeType: state.sizeType || null,
         ...categorySeoPayload(state.seo),
       };
       return state.id
@@ -136,6 +143,7 @@ export function Categories() {
       sortOrder: String(c.sortOrder),
       imageUrl: c.imageUrl ?? '',
       isActive: c.isActive,
+      sizeType: c.sizeType ?? '',
       seo: seoValuesFrom(c),
     });
   };
@@ -149,14 +157,20 @@ export function Categories() {
       setTab('details');
       return setFormError('Name must be at least 2 characters');
     }
-    if (!/^[a-z0-9-]+$/.test(form.slug)) {
+    const addressError = webAddressError(form.slug);
+    if (addressError) {
       setTab('details');
-      return setFormError('Slug may only contain lowercase letters, digits and dashes');
+      return setFormError(addressError);
     }
     save.mutate(form);
   };
 
-  const parentOptions = (categories.data ?? []).filter((c) => !c.parentId && c.id !== form?.id);
+  const parentOptions = (categories.data ?? [])
+    .filter((c) => !c.parentId && c.id !== form?.id)
+    .map((c) => ({ value: c.id, name: c.name, isChild: false, path: c.name }));
+  const parentOfForm = form?.parentId ? (categories.data ?? []).find((c) => c.id === form.parentId) : undefined;
+  // The store shows two levels. A main category with subcategories can't move under another.
+  const hasChildren = !!form?.id && (categories.data ?? []).some((c) => c.parentId === form.id);
 
   /** Initials used when a department has no image of its own. */
   const monogram = (name: string) =>
@@ -198,7 +212,7 @@ export function Categories() {
             {!parent.isActive && <Pill status="HIDDEN" />}
           </h2>
           <p className="dept-meta">
-            <code>/{parent.slug}</code>
+            <code title="Web address">/c/{parent.slug}</code>
             <span aria-hidden="true">·</span>
             <span>
               {productCount} {productCount === 1 ? 'product' : 'products'}
@@ -222,7 +236,7 @@ export function Categories() {
                   type="button"
                   className="sub-chip-main"
                   onClick={() => openEdit(c)}
-                  title={`Edit ${c.name} (/${c.slug})`}
+                  title={`Edit ${c.name} (/c/${c.slug})`}
                 >
                   <span className="sub-chip-name">{c.name}</span>
                   <span className="sub-chip-count">{c._count?.products ?? 0}</span>
@@ -269,7 +283,7 @@ export function Categories() {
         sub="The tree the storefront navigates by."
         actions={
           <button className="btn btn-primary" onClick={() => openCreate()}>
-            + New category
+            + New main category
           </button>
         }
       />
@@ -282,10 +296,10 @@ export function Categories() {
         <div className="card">
           <EmptyState
             title="No categories yet"
-            message="Create the top-level departments first — sarees, dresses, tops…"
+            message="Create the main categories first — sarees, dresses, tops… Then add subcategories inside each one."
             action={
               <button className="btn btn-primary" onClick={() => openCreate()}>
-                + New category
+                + New main category
               </button>
             }
           />
@@ -295,7 +309,7 @@ export function Categories() {
           <div className="cat-summary">
             <div>
               <span className="cat-summary-n">{totals.departments}</span>
-              <span className="cat-summary-l">Departments</span>
+              <span className="cat-summary-l">Main categories</span>
             </div>
             <div>
               <span className="cat-summary-n">{totals.subcategories}</span>
@@ -313,7 +327,15 @@ export function Categories() {
       {form && (
         <Modal
           wide
-          title={form.id ? 'Edit category' : 'New category'}
+          title={
+            form.id
+              ? form.parentId
+                ? 'Edit subcategory'
+                : 'Edit main category'
+              : form.parentId
+                ? 'New subcategory'
+                : 'New main category'
+          }
           onClose={() => setForm(null)}
           footer={
             <>
@@ -377,46 +399,72 @@ export function Categories() {
                 required
               />
             </div>
-            <div className="field">
-              <label htmlFor="c-slug">Slug</label>
-              <input
-                id="c-slug"
-                type="text"
-                value={form.slug}
-                onChange={(e) => {
-                  setSlugTouched(true);
-                  const v = slugify(e.target.value);
-                  setForm((f) => f && { ...f, slug: v });
-                }}
-                required
-              />
-            </div>
+            <WebAddressField
+              id="c-slug"
+              kind="category"
+              value={form.slug}
+              origin={siteOrigin}
+              onChange={(v) => {
+                setSlugTouched(true);
+                setForm((f) => f && { ...f, slug: v });
+              }}
+            />
             <div className="form-row cols-2">
               <div className="field">
-                <label htmlFor="c-parent">Parent</label>
-                <select
+                <label htmlFor="c-parent">Sits under</label>
+                <CategorySelect
                   id="c-parent"
                   value={form.parentId}
-                  onChange={(e) => setForm((f) => f && { ...f, parentId: e.target.value })}
-                >
-                  <option value="">None (top level)</option>
-                  {parentOptions.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </select>
+                  disabled={hasChildren}
+                  aria-describedby="c-parent-hint"
+                  onChange={(v) => setForm((f) => f && { ...f, parentId: v })}
+                  options={parentOptions}
+                  clearLabel="Nothing — this is a main category"
+                />
+                <span className="hint" id="c-parent-hint">
+                  {hasChildren
+                    ? 'This main category has subcategories, so it stays a main category.'
+                    : 'Pick a main category to make this a subcategory of it, e.g. Pattu Silk under Sarees. Choose "Nothing" to create a new main category — it then appears in this list.'}
+                </span>
               </div>
               <div className="field">
-                <label htmlFor="c-sort">Sort order</label>
+                <label htmlFor="c-sort">Display order</label>
                 <input
                   id="c-sort"
                   type="number"
                   min={0}
+                  aria-describedby="c-sort-hint"
                   value={form.sortOrder}
                   onChange={(e) => setForm((f) => f && { ...f, sortOrder: e.target.value })}
                 />
+                <span className="hint" id="c-sort-hint">
+                  Where it appears in menus. Lower numbers show first; 0 is the top.
+                </span>
               </div>
+            </div>
+            <div className="field">
+              <label htmlFor="c-sizes">Sizes for products here</label>
+              <select
+                id="c-sizes"
+                aria-describedby="c-sizes-hint"
+                value={form.sizeType}
+                onChange={(e) => setForm((f) => f && { ...f, sizeType: e.target.value as SizeType | '' })}
+              >
+                <option value="">
+                  {parentOfForm
+                    ? `Same as ${parentOfForm.name} — ${SIZE_CHARTS[parentOfForm.sizeType ?? DEFAULT_SIZE_TYPE].label}`
+                    : `Standard — ${SIZE_CHARTS[DEFAULT_SIZE_TYPE].label}`}
+                </option>
+                {SIZE_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {SIZE_CHARTS[t].label} · {SIZE_CHARTS[t].example}
+                  </option>
+                ))}
+              </select>
+              <span className="hint" id="c-sizes-hint">
+                Decides which size buttons appear when you add a product in this category. Choose "No sizes" for things
+                like watches or bags, and the size column is hidden altogether.
+              </span>
             </div>
             <div className="field">
               <ImageInput
@@ -443,7 +491,7 @@ export function Categories() {
                 subject={{
                   kind: 'category',
                   name: form.name.trim(),
-                  slug: form.slug || 'category-slug',
+                  slug: form.slug || 'category-name',
                   description: '',
                   imageUrl: form.imageUrl || null,
                 }}

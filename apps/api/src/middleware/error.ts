@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 import { Prisma } from '@prisma/client';
 import { logger } from '../lib/logger';
 import { isProd } from '../config/env';
+import { MulterError } from 'multer';
 
 export class ApiError extends Error {
   constructor(
@@ -47,10 +48,27 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     return;
   }
 
+  if (err instanceof MulterError) {
+    const message =
+      err.code === 'LIMIT_FILE_SIZE'
+        ? 'That file is too large. Images must be 5 MB or smaller and videos 100 MB or smaller.'
+        : err.code === 'LIMIT_FILE_COUNT' || err.code === 'LIMIT_UNEXPECTED_FILE'
+          ? 'Upload up to 6 files at a time.'
+          : 'The upload could not be read. Please try again.';
+    res.status(400).json({ success: false, error: { code: 'UPLOAD_REJECTED', message } });
+    return;
+  }
+
   if (err instanceof ZodError) {
     res.status(400).json({
       success: false,
-      error: { code: 'VALIDATION_ERROR', message: 'Invalid request data', details: err.flatten() },
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Invalid request data',
+        // flatten() only keeps the top-level key ("variants"); issues carry the
+        // full path so a client can say which row and field was rejected.
+        details: { ...err.flatten(), issues: err.issues.map((i) => ({ path: i.path, message: i.message })) },
+      },
     });
     return;
   }

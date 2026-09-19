@@ -113,7 +113,7 @@ export function SeoRedirects({ canWrite }: { canWrite: boolean }) {
                 <input
                   id="r-source"
                   type="text"
-                  placeholder="/p/old-slug"
+                  placeholder="/p/old-product-name"
                   value={form.source}
                   onChange={(e) => setForm((f) => ({ ...f, source: e.target.value }))}
                   required
@@ -124,7 +124,7 @@ export function SeoRedirects({ canWrite }: { canWrite: boolean }) {
                 <input
                   id="r-destination"
                   type="text"
-                  placeholder="/p/new-slug"
+                  placeholder="/p/new-product-name"
                   value={form.destination}
                   onChange={(e) => setForm((f) => ({ ...f, destination: e.target.value }))}
                   required
@@ -180,7 +180,7 @@ export function SeoRedirects({ canWrite }: { canWrite: boolean }) {
                   <td>
                     <span className={`pill ${r.statusCode === 301 ? 'info' : 'neutral'}`}>{r.statusCode}</span>
                   </td>
-                  <td className="muted">{r.origin === 'MANUAL' ? 'Manual' : 'Slug change'}</td>
+                  <td className="muted">{r.origin === 'MANUAL' ? 'Added by hand' : 'Web address changed'}</td>
                   <td className="num">{r.hits.toLocaleString('en-IN')}</td>
                   <td className="muted">{formatDate(r.createdAt)}</td>
                   {canWrite && (
@@ -199,7 +199,7 @@ export function SeoRedirects({ canWrite }: { canWrite: boolean }) {
         {!redirects.isPending && !redirects.isError && (redirects.data?.items.length ?? 0) === 0 && (
           <EmptyState
             title="No redirects"
-            message="Nothing has moved yet. Rename a product slug and one will appear here automatically."
+            message="Nothing has moved yet. When you change a category\u2019s web address, a forwarding link appears here automatically."
           />
         )}
       </div>

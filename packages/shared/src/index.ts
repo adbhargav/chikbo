@@ -100,6 +100,8 @@ export interface ProductImageDto {
   id: string;
   url: string;
   alt: string | null;
+  /** Colour this photo belongs to (a variant colour name); null when it applies to every colour. */
+  color: string | null;
   sortOrder: number;
 }
 
@@ -391,3 +393,49 @@ export const CANCELLABLE_STATUSES: OrderStatus[] = ['PENDING', 'CONFIRMED', 'PRO
 
 /** Statuses from which a customer may request a return (genuine damage policy). */
 export const RETURNABLE_STATUSES: OrderStatus[] = ['DELIVERED'];
+
+// --- Size charts -------------------------------------------------------------
+
+/**
+ * Which sizes a category's products come in. Set per category in the admin
+ * (subcategories inherit their department's) and used by the product form to
+ * offer the right size chips — or none at all for watches, bags, jewellery.
+ */
+export const SIZE_TYPES = ['clothing', 'waist', 'footwear', 'kids', 'free', 'none'] as const;
+export type SizeType = (typeof SIZE_TYPES)[number];
+
+/** What a main category uses until someone picks a chart for it. */
+export const DEFAULT_SIZE_TYPE: SizeType = 'clothing';
+
+export const SIZE_CHARTS: Record<SizeType, { label: string; example: string; sizes: readonly string[] }> = {
+  clothing: {
+    label: 'Clothing sizes (XS – 5XL)',
+    example: 'Kurtis, tops, dresses, shirts',
+    sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', '4XL', '5XL'],
+  },
+  waist: {
+    label: 'Waist sizes (26 – 44)',
+    example: 'Jeans, trousers, belts',
+    sizes: ['26', '28', '30', '32', '34', '36', '38', '40', '42', '44'],
+  },
+  footwear: {
+    label: 'Footwear sizes (UK 3 – 12)',
+    example: 'Sandals, shoes, juttis',
+    sizes: ['UK 3', 'UK 4', 'UK 5', 'UK 6', 'UK 7', 'UK 8', 'UK 9', 'UK 10', 'UK 11', 'UK 12'],
+  },
+  kids: {
+    label: 'Kids sizes (by age)',
+    example: 'Kidswear',
+    sizes: ['0-1Y', '1-2Y', '2-3Y', '3-4Y', '5-6Y', '7-8Y', '9-10Y', '11-12Y', '13-14Y'],
+  },
+  free: {
+    label: 'One size (Free Size)',
+    example: 'Sarees, dupattas, stoles',
+    sizes: ['Free Size'],
+  },
+  none: {
+    label: 'No sizes',
+    example: 'Watches, bags, jewellery, wallets',
+    sizes: [],
+  },
+};

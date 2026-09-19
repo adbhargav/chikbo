@@ -89,9 +89,9 @@ const BULK_ACTIONS: BulkAction[] = [
   },
   {
     target: 'productSlugs',
-    label: 'Regenerate empty product slugs',
-    blurb: 'Only touches products whose slug is blank — existing URLs never change.',
-    fills: 'the slug of any product whose slug is blank',
+    label: 'Fill in missing product web addresses',
+    blurb: 'Only touches products with no web address — existing links never change.',
+    fills: 'the web address of any product that has none',
     pending: () => 0,
   },
 ];

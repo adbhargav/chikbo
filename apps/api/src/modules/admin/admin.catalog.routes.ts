@@ -5,6 +5,7 @@ import { prisma } from '../../lib/prisma';
 import { validate } from '../../middleware/validate';
 import { ApiError, asyncHandler, ok } from '../../middleware/error';
 import { requireAuth, requireStaff, requirePermission, type AuthedRequest } from '../../middleware/auth';
+import { SIZE_TYPES } from '@chikbo/shared';
 import { imageRefSchema } from '../../utils/validators';
 import { ROBOTS_VALUES } from '../seo/seo.config';
 import { recordSlugChange } from '../seo/seo.service';
@@ -35,6 +36,8 @@ const categoryBody = z.object({
   sortOrder: z.number().int().min(0).optional(),
   isActive: z.boolean().optional(),
   imageAlt: z.string().trim().max(200).nullable().optional(),
+  /// Size chart for products in this category; null inherits the parent's.
+  sizeType: z.enum(SIZE_TYPES).nullable().optional(),
   seoTitle: z.string().trim().max(200).nullable().optional(),
   seoDescription: z.string().trim().max(500).nullable().optional(),
   seoKeywords: z.string().trim().max(300).nullable().optional(),
@@ -132,7 +135,7 @@ const productBody = z.object({
   twitterDescription: z.string().trim().max(500).nullable().optional(),
   twitterImage: seoUrl.nullable().optional(),
   isActive: z.boolean().optional(),
-  images: z.array(z.object({ url: z.string().min(1), alt: z.string().max(200).nullable().optional() })).max(10).optional(),
+  images: z.array(z.object({ url: z.string().min(1), alt: z.string().max(200).nullable().optional(), color: z.string().trim().max(40).nullable().optional() })).max(10).optional(),
   variants: z.array(variantBody).min(1).max(50),
 }).superRefine((val, ctx) => {
   for (const [i, v] of val.variants.entries()) {
@@ -192,7 +195,7 @@ adminCatalogRouter.post(
     const product = await prisma.product.create({
       data: {
         ...data,
-        images: { create: (images ?? []).map((img: { url: string; alt?: string | null }, i: number) => ({ ...img, sortOrder: i })) },
+        images: { create: (images ?? []).map((img: { url: string; alt?: string | null; color?: string | null }, i: number) => ({ url: img.url, alt: img.alt ?? null, color: img.color || null, sortOrder: i })) },
         variants: { create: variants },
       },
       include: { images: true, variants: true },
@@ -228,7 +231,7 @@ adminCatalogRouter.patch(
       twitterDescription: z.string().trim().max(500).nullable().optional(),
       twitterImage: seoUrl.nullable().optional(),
       isActive: z.boolean().optional(),
-      images: z.array(z.object({ url: z.string().min(1), alt: z.string().max(200).nullable().optional() })).max(10).optional(),
+      images: z.array(z.object({ url: z.string().min(1), alt: z.string().max(200).nullable().optional(), color: z.string().trim().max(40).nullable().optional() })).max(10).optional(),
     }),
   }),
   asyncHandler(async (req, res) => {
@@ -239,7 +242,7 @@ adminCatalogRouter.patch(
       if (images) {
         await tx.productImage.deleteMany({ where: { productId: req.params.id } });
         await tx.productImage.createMany({
-          data: images.map((img: { url: string; alt?: string | null }, i: number) => ({ productId: req.params.id, url: img.url, alt: img.alt ?? null, sortOrder: i })),
+          data: images.map((img: { url: string; alt?: string | null; color?: string | null }, i: number) => ({ productId: req.params.id, url: img.url, alt: img.alt ?? null, color: img.color || null, sortOrder: i })),
         });
       }
       return tx.product.update({
@@ -254,6 +257,32 @@ adminCatalogRouter.patch(
     }
     await audit(user.id, 'product.update', 'product', product.id, data);
     ok(res, product);
+  }),
+);
+
+/**
+ * Permanently delete a product that was never ordered. Images, variants,
+ * stock history, reviews, bag and wishlist entries go with it (cascade).
+ * A product that appears on any order must stay for order history — hide it
+ * from the store instead.
+ */
+adminCatalogRouter.delete(
+  '/products/:id',
+  requirePermission('products.write'),
+  validate({ params: z.object({ id: z.string() }) }),
+  asyncHandler(async (req, res) => {
+    const { user } = req as AuthedRequest;
+    const product = await prisma.product.findUnique({ where: { id: req.params.id }, select: { id: true, name: true, slug: true } });
+    if (!product) throw ApiError.notFound('Product not found');
+    const ordered = await prisma.orderItem.count({ where: { variant: { productId: product.id } } });
+    if (ordered > 0) {
+      throw ApiError.conflict(
+        'This product is part of past orders, so it cannot be deleted. Untick "Visible in the store" to hide it instead.',
+      );
+    }
+    await prisma.product.delete({ where: { id: product.id } });
+    await audit(user.id, 'product.delete', 'product', product.id, { name: product.name, slug: product.slug });
+    ok(res, { deleted: true });
   }),
 );
 

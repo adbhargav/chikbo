@@ -1,11 +1,17 @@
 import { Link } from 'react-router-dom';
 import { usePageMeta } from '../lib/usePageMeta';
+import { useRedirectIfMoved } from '../lib/redirects';
 
 export default function NotFound() {
   // A soft 404 must never be indexed, whatever path led here.
   usePageMeta('Page not found', 'The page you are looking for could not be found.', {
     robots: 'noindex,follow',
   });
+  // A moved page (renamed product, retired URL) forwards instead of dead-ending.
+  const checking = useRedirectIfMoved(true);
+  if (checking) {
+    return <div className="container page" aria-busy="true" style={{ minHeight: '50vh' }} />;
+  }
   return (
     <div className="container page" style={{ textAlign: 'center', paddingBlock: 96 }}>
       <span

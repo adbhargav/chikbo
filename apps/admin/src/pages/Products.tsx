@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from 'react-router-dom';
 import type { Paginated } from '@chikbo/shared';
@@ -7,6 +7,7 @@ import type { AdminCategory, AdminProduct } from '../lib/types';
 import { categoryOptions, formatPaise } from '../lib/format';
 import { PermissionGate } from '../lib/auth';
 import { useToast } from '../components/Toast';
+import { CategorySelect } from '../components/pickers/CategorySelect';
 import {
   EmptyState,
   ErrorState,
@@ -40,6 +41,7 @@ export function Products() {
     queryKey: ['admin-categories'],
     queryFn: () => api<AdminCategory[]>('/admin/categories'),
   });
+  const categoryChoices = useMemo(() => categoryOptions(categories.data ?? []), [categories.data]);
 
   const toggleActive = useMutation({
     mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
@@ -79,22 +81,17 @@ export function Products() {
             setPage(1);
           }}
         />
-        <select
+        <CategorySelect
+          id="products-category"
           aria-label="Filter by category"
           value={categoryId}
-          onChange={(e) => {
-            setCategoryId(e.target.value);
+          onChange={(v) => {
+            setCategoryId(v);
             setPage(1);
           }}
-        >
-          <option value="">All categories</option>
-          {categoryOptions(categories.data ?? []).map((c) => (
-            <option key={c.id} value={c.id} title={c.path}>
-              {c.isChild ? '  — ' : ''}
-              {c.name}
-            </option>
-          ))}
-        </select>
+          options={categoryChoices}
+          clearLabel="All categories"
+        />
       </div>
 
       {products.isError ? (

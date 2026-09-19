@@ -1,14 +1,18 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import type { Paginated } from '@chikbo/shared';
+import { DEFAULT_SIZE_TYPE, SIZE_CHARTS, type Paginated, type SizeType } from '@chikbo/shared';
 import { api, assetUrl, errorMessage } from '../lib/api';
 import { ImageInput } from '../components/ImageInput';
+import { SUGGESTED_COLOURS, swatchFor } from '../lib/colors';
+import { WebAddressField, webAddressError } from '../components/WebAddressField';
 import type { AdminCategory, AdminProduct, AdminVariant, VariantInput } from '../lib/types';
 import { categoryOptions, paiseToRupees, rupeesToPaise, slugify } from '../lib/format';
 import { useAuth } from '../lib/auth';
 import { useToast } from '../components/Toast';
+import { CategorySelect } from '../components/pickers/CategorySelect';
 import { CardSkeleton, ErrorState, PageHead } from '../components/ui';
+import { ConfirmDialog } from '../components/Modal';
 import { SeoPanel } from '../components/seo';
 import {
   emptySeoValues,
@@ -35,6 +39,8 @@ async function fetchProductById(id: string): Promise<AdminProduct> {
 interface ImageRow {
   url: string;
   alt: string;
+  /** Colour this photo shows; '' = every colour. */
+  color: string;
 }
 interface AttrRow {
   key: string;
@@ -82,13 +88,30 @@ function variantToRow(v: AdminVariant): VariantRow {
   };
 }
 
+/** "maroon-anarkali" + Maroon + XL -> "MAROON-ANARKALI-MAROON-XL", used when the SKU box is left empty. */
+function autoSku(productSlug: string, row: VariantRow): string {
+  return [productSlug, row.color, row.size]
+    .map((part) => slugify(part))
+    .filter(Boolean)
+    .join('-')
+    .toUpperCase()
+    .slice(0, 60);
+}
+
 /** Validate one variant row; returns an error string or the API payload. */
 function buildVariant(row: VariantRow, forCreate: boolean): { error?: string; payload?: VariantInput } {
   if (row.sku.trim().length < 2) return { error: 'SKU must be at least 2 characters' };
+  // Same limits the API enforces, so a long value is caught here by name
+  // instead of coming back as a bare "Invalid request data".
+  if (row.sku.trim().length > 60) return { error: `SKU ${row.sku.trim().slice(0, 20)}… is too long (60 characters max)` };
+  if (row.size.trim().length > 20) return { error: `Size for ${row.sku} is too long (20 characters max)` };
+  if (row.color.trim().length > 40) return { error: `Colour for ${row.sku} is too long (40 characters max)` };
   const price = rupeesToPaise(row.price);
   if (price === null || price < 100) return { error: `Price for ${row.sku || 'variant'} must be at least ₹1` };
-  const discount = row.discountPrice.trim() === '' ? null : rupeesToPaise(row.discountPrice);
-  if (row.discountPrice.trim() !== '' && discount === null) return { error: `Invalid discount for ${row.sku}` };
+  const typedDiscount = row.discountPrice.trim() === '' ? null : rupeesToPaise(row.discountPrice);
+  if (row.discountPrice.trim() !== '' && typedDiscount === null) return { error: `Invalid discount for ${row.sku}` };
+  // "0" means no discounted price; the API rejects a zero amount.
+  const discount = typedDiscount === 0 ? null : typedDiscount;
   if (discount !== null && discount >= price) {
     return { error: `Discount for ${row.sku} must be below the price` };
   }
@@ -134,6 +157,7 @@ export function ProductForm() {
     queryKey: ['admin-categories'],
     queryFn: () => api<AdminCategory[]>('/admin/categories'),
   });
+  const categoryChoices = useMemo(() => categoryOptions(categories.data ?? []), [categories.data]);
 
   // --- form state ---
   const [name, setName] = useState('');
@@ -170,7 +194,7 @@ export function ProductForm() {
     setBadge(p.badge ?? '');
     setIsActive(p.isActive);
     setAttrs(Object.entries(p.attributes ?? {}).map(([key, value]) => ({ key, value })));
-    setImages(p.images.map((img) => ({ url: img.url, alt: img.alt ?? '' })));
+    setImages(p.images.map((img) => ({ url: img.url, alt: img.alt ?? '', color: img.color ?? '' })));
     setVariants(p.variants.map(variantToRow));
     setSeo(seoValuesFrom(p));
   }, [existing.data]);
@@ -184,6 +208,55 @@ export function ProductForm() {
     setVariants((prev) => prev.map((v, i) => (i === index ? { ...v, ...patch } : v)));
   };
 
+  // The category decides which sizes are on offer (its own chart, else its
+  // department's). "none" — watches, bags — hides sizes altogether.
+  const chosenCategory = (categories.data ?? []).find((c) => c.id === categoryId);
+  const parentCategory = chosenCategory?.parentId
+    ? (categories.data ?? []).find((c) => c.id === chosenCategory.parentId)
+    : undefined;
+  const sizeType: SizeType = chosenCategory?.sizeType ?? parentCategory?.sizeType ?? DEFAULT_SIZE_TYPE;
+  const chartSizes = SIZE_CHARTS[sizeType].sizes;
+  const rowSizes = [...new Set(variants.map((v) => v.size.trim()).filter(Boolean))];
+  const sizeChips = [...chartSizes, ...rowSizes.filter((size) => !chartSizes.includes(size))];
+  const showSizes = sizeType !== 'none' || rowSizes.length > 0;
+  const [customSize, setCustomSize] = useState('');
+
+  /** Tick a size: one row per colour appears. Untick: its unsaved rows go. */
+  const toggleSize = (size: string) => {
+    setVariants((prev) => {
+      if (prev.some((r) => r.size.trim() === size)) {
+        // Saved rows carry stock history — they are switched off with "Active", not removed.
+        const next = prev.filter((r) => r.size.trim() !== size || r.id);
+        return next.length ? next : [emptyVariant()];
+      }
+      // New rows still waiting for a size take this one.
+      if (prev.some((r) => !r.id && r.size.trim() === '')) {
+        return prev.map((r) => (!r.id && r.size.trim() === '' ? { ...r, size } : r));
+      }
+      const colours = [...new Set(prev.map((r) => r.color.trim()))];
+      const first = prev[0];
+      return [
+        ...prev,
+        ...colours.map((color) => ({
+          ...emptyVariant(),
+          size,
+          color,
+          weightGrams: first?.weightGrams ?? '',
+          price: first?.price ?? '',
+          discountPrice: first?.discountPrice ?? '',
+          lowStockThreshold: first?.lowStockThreshold ?? '5',
+        })),
+      ];
+    });
+  };
+
+  const addCustomSize = () => {
+    const size = customSize.trim();
+    if (!size || size.length > 20) return;
+    if (!rowSizes.includes(size)) toggleSize(size);
+    setCustomSize('');
+  };
+
   const attributesPayload = (): Record<string, string> | null => {
     const entries = attrs
       .filter((a) => a.key.trim() !== '' && a.value.trim() !== '')
@@ -195,6 +268,10 @@ export function ProductForm() {
     if (name.trim().length < 3) return 'Name must be at least 3 characters';
     if (description.trim().length < 10) return 'Description must be at least 10 characters';
     if (!categoryId) return 'Pick a category';
+    if (name.trim().length > 200) return 'Name is too long (200 characters max)';
+    if (badge.trim().length > 40) return 'Badge is too long (40 characters max)';
+    if (images.length > 10) return 'A product can have up to 10 photos';
+    if (images.some((img) => img.alt.trim().length > 200)) return 'A photo description is too long (200 characters max)';
     return null;
   };
 
@@ -243,6 +320,21 @@ export function ProductForm() {
     onError: (err) => toast(errorMessage(err), 'error'),
   });
 
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const deleteMutation = useMutation({
+    mutationFn: () => api<{ deleted: boolean }>(`/admin/products/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      toast('Product deleted', 'success');
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      queryClient.removeQueries({ queryKey: ['product', id] });
+      navigate('/products', { replace: true });
+    },
+    onError: (err) => {
+      setConfirmDelete(false);
+      toast(errorMessage(err), 'error');
+    },
+  });
+
   const onSubmit = (e: FormEvent) => {
     e.preventDefault();
     setFormError(null);
@@ -250,13 +342,19 @@ export function ProductForm() {
     if (sharedErr) return setFormError(sharedErr);
 
     if (!isEdit) {
-      if (!/^[a-z0-9-]+$/.test(slug)) return setFormError('Slug may only contain lowercase letters, digits and dashes');
+      const addressError = webAddressError(slug);
+      if (addressError) return setFormError(addressError);
       if (variants.length === 0) return setFormError('Add at least one variant');
       const built: VariantInput[] = [];
       for (const row of variants) {
-        const { error, payload } = buildVariant(row, true);
+        const { error, payload } = buildVariant(row.sku.trim() ? row : { ...row, sku: autoSku(slug, row) }, true);
         if (error) return setFormError(error);
         built.push(payload!);
+      }
+      const skus = built.map((v) => v.sku.toLowerCase());
+      const repeated = skus.find((sku, i) => skus.indexOf(sku) !== i);
+      if (repeated) {
+        return setFormError(`Two rows share the SKU ${repeated.toUpperCase()} — each size and colour needs its own row`);
       }
       createMutation.mutate({
         name: name.trim(),
@@ -266,7 +364,7 @@ export function ProductForm() {
         attributes: attributesPayload(),
         badge: badge.trim() || null,
         isActive,
-        images: images.map((img) => ({ url: img.url, alt: img.alt.trim() || null })),
+        images: images.map((img) => ({ url: img.url, alt: img.alt.trim() || null, color: img.color.trim() || null })),
         variants: built,
         ...productSeoPayload(seo),
       });
@@ -278,14 +376,14 @@ export function ProductForm() {
         attributes: attributesPayload(),
         badge: badge.trim() || null,
         isActive,
-        images: images.map((img) => ({ url: img.url, alt: img.alt.trim() || null })),
+        images: images.map((img) => ({ url: img.url, alt: img.alt.trim() || null, color: img.color.trim() || null })),
         ...productSeoPayload(seo),
       });
     }
   };
 
   const onSaveVariantRow = (row: VariantRow) => {
-    const { error, payload } = buildVariant(row, false);
+    const { error, payload } = buildVariant(row.sku.trim() ? row : { ...row, sku: autoSku(slug, row) }, false);
     if (error) return toast(error, 'error');
     if (row.id) {
       saveVariantMutation.mutate({ variantId: row.id, payload: payload! });
@@ -312,6 +410,15 @@ export function ProductForm() {
   }
 
   const saving = createMutation.isPending || updateMutation.isPending;
+  const colourNames = Array.from(new Set(variants.map((v) => v.color.trim()).filter(Boolean)));
+  // One upload box per colour used by the variants, plus one for photos shared by every colour.
+  // Photos tagged with a colour no variant uses any more (a renamed colour) stay visible so they can be fixed.
+  const leftoverColours = Array.from(new Set(images.map((img) => img.color).filter((c) => c && !colourNames.includes(c))));
+  const photoGroups: { key: string; label: string; leftover?: boolean }[] = [
+    ...colourNames.map((c) => ({ key: c, label: c })),
+    ...leftoverColours.map((c) => ({ key: c, label: c, leftover: true })),
+    { key: '', label: colourNames.length ? 'All colours' : 'Product photos' },
+  ];
 
   return (
     <main className="page">
@@ -320,11 +427,30 @@ export function ProductForm() {
         title={isEdit ? existing.data?.name ?? 'Edit product' : 'New product'}
         sub={isEdit ? 'Stock changes live in Inventory — everything else lives here.' : 'A new piece for the shelf.'}
         actions={
-          <Link to="/products" className="btn btn-secondary">
-            ← All products
-          </Link>
+          <>
+            {isEdit && canWrite && (
+              <button type="button" className="btn btn-danger" onClick={() => setConfirmDelete(true)}>
+                Delete product
+              </button>
+            )}
+            <Link to="/products" className="btn btn-secondary">
+              ← All products
+            </Link>
+          </>
         }
       />
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Delete product?"
+          message={`Delete ${existing.data?.name ?? 'this product'} with all its photos, variants and stock history? This cannot be undone. Products that appear on orders cannot be deleted — hide them from the store instead.`}
+          confirmLabel="Delete"
+          danger
+          busy={deleteMutation.isPending}
+          onConfirm={() => deleteMutation.mutate()}
+          onClose={() => setConfirmDelete(false)}
+        />
+      )}
 
       <form onSubmit={onSubmit}>
         <div className="detail-grid">
@@ -347,22 +473,18 @@ export function ProductForm() {
                   required
                 />
               </div>
-              <div className="field">
-                <label htmlFor="p-slug">Slug</label>
-                <input
-                  id="p-slug"
-                  type="text"
-                  value={slug}
-                  onChange={(e) => {
-                    setSlugTouched(true);
-                    setSlug(slugify(e.target.value));
-                  }}
-                  disabled={isEdit || !canWrite}
-                />
-                <span className="hint">
-                  {isEdit ? 'Slugs are permanent once published.' : 'Auto-suggested from the name; lowercase and dashes.'}
-                </span>
-              </div>
+              <WebAddressField
+                id="p-slug"
+                kind="product"
+                value={slug}
+                origin={siteOrigin}
+                locked={isEdit}
+                disabled={!canWrite}
+                onChange={(v) => {
+                  setSlugTouched(true);
+                  setSlug(v);
+                }}
+              />
               <div className="field">
                 <label htmlFor="p-desc">Description</label>
                 <textarea
@@ -376,21 +498,14 @@ export function ProductForm() {
               <div className="form-row cols-2">
                 <div className="field">
                   <label htmlFor="p-cat">Category</label>
-                  <select
+                  <CategorySelect
                     id="p-cat"
                     value={categoryId}
-                    onChange={(e) => setCategoryId(e.target.value)}
+                    onChange={setCategoryId}
+                    options={categoryChoices}
+                    placeholder="Choose a category…"
                     disabled={!canWrite}
-                    required
-                  >
-                    <option value="">Choose…</option>
-                    {categoryOptions(categories.data ?? []).map((c) => (
-                      <option key={c.id} value={c.id} title={c.path}>
-                        {c.isChild ? '  — ' : ''}
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
                 <div className="field" style={{ justifyContent: 'flex-end' }}>
                   <label className="checkbox" style={{ marginTop: 22 }}>
@@ -423,11 +538,72 @@ export function ProductForm() {
               <h3 className="card-title">Variants</h3>
               {isEdit && (
                 <p className="hint" style={{ marginBottom: 10, fontSize: 12.5, color: 'var(--ink-500)' }}>
-                  Stock is adjusted in{' '}
+                  One row per colour and size. Each row has its own price and stock, so a Maroon saree can cost more than a
+                  Sage one. Stock is adjusted in{' '}
                   <Link to="/inventory" className="link">
                     Inventory
                   </Link>{' '}
                   so every change is logged. Other fields save per row.
+                </p>
+              )}
+              {showSizes ? (
+                <div className="sizepick">
+                  <div className="sizepick-head">
+                    <span className="sizepick-label">Sizes</span>
+                    <span className="hint">
+                      {chosenCategory
+                        ? `${SIZE_CHARTS[sizeType].label} — set by the ${chosenCategory.name} category`
+                        : 'Pick a category to see its sizes'}
+                    </span>
+                  </div>
+                  <div className="sizepick-chips" role="group" aria-label="Sizes this product comes in">
+                    {sizeChips.map((size) => {
+                      const rows = variants.filter((r) => r.size.trim() === size);
+                      const locked = rows.length > 0 && rows.every((r) => r.id);
+                      return (
+                        <button
+                          key={size}
+                          type="button"
+                          className="size-chip"
+                          aria-pressed={rows.length > 0}
+                          disabled={!canWrite || locked}
+                          title={locked ? 'Already saved — untick Active on its row to stop selling it' : undefined}
+                          onClick={() => toggleSize(size)}
+                        >
+                          {size}
+                        </button>
+                      );
+                    })}
+                    {canWrite && (
+                      <span className="sizepick-custom">
+                        <input
+                          type="text"
+                          aria-label="Another size"
+                          placeholder="Other size"
+                          maxLength={20}
+                          value={customSize}
+                          onChange={(e) => setCustomSize(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              addCustomSize();
+                            }
+                          }}
+                        />
+                        <button type="button" className="btn btn-ghost btn-sm" onClick={addCustomSize} disabled={!customSize.trim()}>
+                          Add
+                        </button>
+                      </span>
+                    )}
+                  </div>
+                  <span className="hint">
+                    Tick every size you stock. Each one gets a row below for every colour, with its own price and stock.
+                  </span>
+                </div>
+              ) : (
+                <p className="hint sizepick-none">
+                  Products in {chosenCategory?.name ?? 'this category'} don't come in sizes, so there is no size to fill
+                  in. You can change that under Categories.
                 </p>
               )}
               <div className="variant-grid">
@@ -435,8 +611,8 @@ export function ProductForm() {
                   <thead>
                     <tr>
                       <th>SKU</th>
-                      <th>Size</th>
-                      <th>Color</th>
+                      {showSizes && <th>Size</th>}
+                      <th>Colour</th>
                       <th className="num">Weight g</th>
                       <th className="num">Price ₹</th>
                       <th className="num">Discount ₹</th>
@@ -454,28 +630,41 @@ export function ProductForm() {
                           <input
                             type="text"
                             aria-label={`Variant ${i + 1} SKU`}
+                            placeholder="Auto"
                             value={row.sku}
                             onChange={(e) => setVariant(i, { sku: e.target.value })}
                             disabled={!canWrite}
                           />
                         </td>
-                        <td style={{ width: 70 }}>
-                          <input
-                            type="text"
-                            aria-label={`Variant ${i + 1} size`}
-                            value={row.size}
-                            onChange={(e) => setVariant(i, { size: e.target.value })}
-                            disabled={!canWrite}
-                          />
-                        </td>
-                        <td style={{ width: 100 }}>
-                          <input
-                            type="text"
-                            aria-label={`Variant ${i + 1} color`}
-                            value={row.color}
-                            onChange={(e) => setVariant(i, { color: e.target.value })}
-                            disabled={!canWrite}
-                          />
+                        {showSizes && (
+                          <td style={{ width: 96 }}>
+                            <input
+                              type="text"
+                              aria-label={`Variant ${i + 1} size`}
+                              value={row.size}
+                              onChange={(e) => setVariant(i, { size: e.target.value })}
+                              disabled={!canWrite}
+                            />
+                          </td>
+                        )}
+                        <td style={{ minWidth: 190 }}>
+                          <div className="colour-cell">
+                            <span
+                              className={`colour-dot${swatchFor(row.color || '').light ? ' colour-dot--light' : ''}`}
+                              style={{ background: row.color ? swatchFor(row.color).fill : 'transparent' }}
+                              title={row.color || 'No colour'}
+                              aria-hidden="true"
+                            />
+                            <input
+                              type="text"
+                              list="colour-suggestions"
+                              aria-label={`Variant ${i + 1} colour`}
+                              placeholder="e.g. Maroon"
+                              value={row.color}
+                              onChange={(e) => setVariant(i, { color: e.target.value })}
+                              disabled={!canWrite}
+                            />
+                          </div>
                         </td>
                         <td style={{ width: 80 }}>
                           <input
@@ -590,62 +779,119 @@ export function ProductForm() {
 
           <div className="stack">
             <div className="card pad">
-              <h3 className="card-title">Images</h3>
-              <div className="editor-rows">
-                {images.map((img, i) => (
-                  <div className="img-tile" key={`${img.url}-${i}`}>
-                    <img
-                      src={assetUrl(img.url) ?? ''}
-                      alt=""
-                      style={{ width: 34, height: 44, objectFit: 'cover', borderRadius: 5, background: 'var(--cream-100)' }}
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.visibility = 'hidden';
-                      }}
-                    />
-                    <span className="url" title={img.url}>
-                      {img.url}
-                    </span>
-                    <input
-                      type="text"
-                      placeholder="Alt text"
-                      aria-label={`Alt text for image ${i + 1}`}
-                      style={{ width: 110 }}
-                      value={img.alt}
-                      onChange={(e) =>
-                        setImages((prev) => prev.map((im, j) => (j === i ? { ...im, alt: e.target.value } : im)))
-                      }
-                      disabled={!canWrite}
-                    />
-                    {canWrite && (
-                      <button
-                        type="button"
-                        className="btn btn-ghost btn-icon"
-                        aria-label={`Remove image ${i + 1}`}
-                        onClick={() => setImages((prev) => prev.filter((_, j) => j !== i))}
-                      >
-                        ✕
-                      </button>
+              <h3 className="card-title">Photos</h3>
+              <p className="muted" style={{ fontSize: 13, margin: '-6px 0 14px' }}>
+                Each colour gets its own photos. Shoppers see the photos for the colour they pick. Colours come from the
+                Variants table — add a variant row with a colour and its box appears here.
+              </p>
+              <datalist id="colour-suggestions">
+                {Array.from(new Set([...colourNames, ...SUGGESTED_COLOURS])).map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+              {photoGroups.map((group) => {
+                const groupImages = images.filter((img) => (img.color || '') === group.key);
+                return (
+                  <div className="photo-group" key={group.key || '__all__'}>
+                    <div className="photo-group-head">
+                      {group.key ? (
+                        <span
+                          className={`colour-dot${swatchFor(group.key).light ? ' colour-dot--light' : ''}`}
+                          style={{ background: swatchFor(group.key).fill }}
+                          aria-hidden="true"
+                        />
+                      ) : null}
+                      <strong>{group.label}</strong>
+                      <span className="muted" style={{ fontSize: 12 }}>
+                        {group.leftover
+                          ? `No variant is called “${group.key}” any more, so shoppers can't see these. Move them to a colour or remove them.`
+                          : group.key
+                            ? `Shown when a shopper picks ${group.key}.`
+                            : 'Shown for every colour, e.g. fabric close-ups.'}
+                      </span>
+                      {group.leftover && canWrite && colourNames.length > 0 && (
+                        <select
+                          aria-label={`Move ${group.key} photos to`}
+                          value=""
+                          onChange={(e) => {
+                            const to = e.target.value;
+                            if (to === '') return;
+                            const target = to === '__all__' ? '' : to;
+                            setImages((prev) => prev.map((im) => (im.color === group.key ? { ...im, color: target } : im)));
+                          }}
+                        >
+                          <option value="">Move these photos to…</option>
+                          {colourNames.map((c) => (
+                            <option key={c} value={c}>
+                              {c}
+                            </option>
+                          ))}
+                          <option value="__all__">All colours</option>
+                        </select>
+                      )}
+                    </div>
+                    {groupImages.length > 0 && (
+                      <div className="photo-grid">
+                        {groupImages.map((img) => {
+                          const i = images.indexOf(img);
+                          return (
+                            <div className="photo-cell" key={`${img.url}-${i}`}>
+                              <img
+                                src={assetUrl(img.url) ?? ''}
+                                alt={img.alt || ''}
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.visibility = 'hidden';
+                                }}
+                              />
+                              {i === 0 && <span className="photo-main">Main photo</span>}
+                              {canWrite && (
+                                <button
+                                  type="button"
+                                  className="photo-remove"
+                                  aria-label={`Remove photo ${i + 1}`}
+                                  onClick={() => setImages((prev) => prev.filter((_, j) => j !== i))}
+                                >
+                                  ✕
+                                </button>
+                              )}
+                              {canWrite && (
+                                <button
+                                  type="button"
+                                  className="photo-first"
+                                  title="Make this the first photo"
+                                  aria-label={`Make photo ${i + 1} the first photo`}
+                                  onClick={() => setImages((prev) => [img, ...prev.filter((_, j) => j !== i)])}
+                                  disabled={i === 0}
+                                >
+                                  ★
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {canWrite && !group.leftover && (
+                      <ImageInput
+                        max={10}
+                        showPreviews={false}
+                        value={groupImages.map((img) => img.url)}
+                        hint={group.key ? `Add ${group.key} photos — up to 10.` : 'Optional. Photos that apply to every colour.'}
+                        onChange={(urls) =>
+                          setImages((prev) => {
+                            const others = prev.filter((im) => (im.color || '') !== group.key);
+                            const mine = urls.map(
+                              (url) => prev.find((im) => im.url === url && (im.color || '') === group.key) ?? { url, alt: '', color: group.key },
+                            );
+                            return [...others, ...mine];
+                          })
+                        }
+                      />
                     )}
                   </div>
-                ))}
-                {images.length === 0 && <p className="muted" style={{ fontSize: 13 }}>No images yet.</p>}
-              </div>
-              {canWrite && (
-                <div style={{ marginTop: 12 }}>
-                  <ImageInput
-                    max={6}
-                    showPreviews={false}
-                    value={images.map((img) => img.url)}
-                    hint="The first image is the card thumbnail. Drag to add several at once."
-                    onChange={(urls) =>
-                      // Keep the alt text already written for images that survive.
-                      setImages((prev) =>
-                        urls.map((url) => prev.find((im) => im.url === url) ?? { url, alt: '' }),
-                      )
-                    }
-                  />
-                </div>
-              )}
+                );
+              })}
+              {images.length === 0 && <p className="muted" style={{ fontSize: 13 }}>No photos yet.</p>}
             </div>
 
             <div className="card pad">
@@ -726,7 +972,7 @@ export function ProductForm() {
             subject={{
               kind: 'product',
               name: name.trim(),
-              slug: slug || 'product-slug',
+              slug: slug || 'product-name',
               description,
               imageUrl: images[0]?.url ?? null,
             }}

@@ -3,10 +3,15 @@
   "installCommand": "cd ../.. && npm install",
   "build": {
     "env": {
-      "VITE_API_URL": "https://chikbo.onrender.com/api/v1"
+      "VITE_API_URL": "https://chikbo.com/api/v1"
     }
   },
   "buildCommand": "cd ../.. && npm run build --workspace packages/shared && npm run build --workspace apps/web",
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/((?!assets/).*)", "destination": "/index.html" }]
+  "rewrites": [
+    {
+      "source": "/((?!assets/).*)",
+      "destination": "/index.html"
+    }
+  ]
 }

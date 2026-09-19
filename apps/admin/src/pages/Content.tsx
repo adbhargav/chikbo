@@ -9,9 +9,9 @@ import { useAuth } from '../lib/auth';
 import { useToast } from '../components/Toast';
 import { ConfirmDialog, Modal } from '../components/Modal';
 import { CardSkeleton, EmptyState, ErrorState, PageHead, Switch } from '../components/ui';
+import { STOREFRONT_URL } from '../lib/format';
 
 /** Where the storefront lives, for the "preview" link. */
-const STOREFRONT_URL = (import.meta.env.VITE_WEB_URL as string | undefined) ?? 'http://localhost:5173';
 
 const TYPE_HINTS: Record<HomeSectionType, string> = {
   HERO_CAROUSEL: 'Full-bleed promotional banners',

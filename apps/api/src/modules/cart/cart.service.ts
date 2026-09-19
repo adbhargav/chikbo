@@ -4,6 +4,7 @@ import { prisma } from '../../lib/prisma';
 import { ApiError } from '../../middleware/error';
 import type { CartOwner } from '../../middleware/guest';
 import { computeDiscount, computeShipping, effectiveUnitPrice, type CouponRule } from '../../utils/pricing';
+import { thumbnailFor } from '../catalog/catalog.service';
 
 export const MAX_QTY_PER_LINE = 10;
 
@@ -61,7 +62,7 @@ export async function getCart(owner: CartOwner, couponCode?: string, guestEmail?
     where: ownerWhere(owner),
     include: {
       variant: {
-        include: { product: { include: { images: { orderBy: { sortOrder: 'asc' }, take: 1 } } } },
+        include: { product: { include: { images: { orderBy: { sortOrder: 'asc' } } } } },
       },
     },
     orderBy: { createdAt: 'desc' },
@@ -77,7 +78,7 @@ export async function getCart(owner: CartOwner, couponCode?: string, guestEmail?
         productId: r.variant.productId,
         productName: r.variant.product.name,
         productSlug: r.variant.product.slug,
-        thumbnailUrl: r.variant.product.images[0]?.url ?? null,
+        thumbnailUrl: thumbnailFor(r.variant.product.images, r.variant.color),
         size: r.variant.size,
         color: r.variant.color,
         qty: r.qty,

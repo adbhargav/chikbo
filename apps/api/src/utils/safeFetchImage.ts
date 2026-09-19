@@ -91,15 +91,32 @@ export async function fetchRemoteImage(rawUrl: string): Promise<FetchedImage> {
     }
     await assertPublicHost(url.hostname);
 
-    const response = await axios.get(url.toString(), {
-      responseType: 'arraybuffer',
-      maxRedirects: 0,
-      timeout: 15_000,
-      maxContentLength: MAX_IMAGE_BYTES,
-      // Resolve for redirects too so we can re-validate the next hop ourselves.
-      validateStatus: (status) => (status >= 200 && status < 300) || (status >= 300 && status < 400),
-      headers: { 'User-Agent': 'Chikbo-Admin-Image-Import/1.0', Accept: 'image/*' },
-    });
+    let response;
+    try {
+      response = await axios.get(url.toString(), {
+        responseType: 'arraybuffer',
+        maxRedirects: 0,
+        timeout: 20_000,
+        maxContentLength: MAX_IMAGE_BYTES,
+        // Resolve for redirects too so we can re-validate the next hop ourselves.
+        validateStatus: (status) => (status >= 200 && status < 300) || (status >= 300 && status < 400),
+        headers: { 'User-Agent': 'Chikbo-Admin-Image-Import/1.0', Accept: 'image/*' },
+      });
+    } catch (err) {
+      // Turn network trouble into a message staff can act on instead of a 500.
+      if (axios.isAxiosError(err)) {
+        if (err.code === 'ECONNABORTED' || err.code === 'ETIMEDOUT') {
+          throw ApiError.unprocessable('IMPORT_TIMEOUT', 'That website took too long to send the image. Try again, or download it and upload the file instead.');
+        }
+        if (err.code === 'ERR_BAD_RESPONSE' && /maxContentLength/i.test(err.message)) {
+          throw ApiError.badRequest('That image is larger than 5 MB');
+        }
+        if (err.response) {
+          throw ApiError.badRequest(`That link could not be downloaded (the website answered ${err.response.status}).`);
+        }
+      }
+      throw ApiError.badRequest('That image could not be downloaded. Check the link and try again.');
+    }
 
     if (response.status >= 300) {
       const location = response.headers.location as string | undefined;

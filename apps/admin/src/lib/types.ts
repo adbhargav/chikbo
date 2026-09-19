@@ -12,6 +12,7 @@ import type {
   PaymentStatus,
   Permission,
   ReturnStatus,
+  SizeType,
   UserRole,
 } from '@chikbo/shared';
 
@@ -39,6 +40,8 @@ export interface AdminCategory extends SeoColumns {
   imageAlt: string | null;
   sortOrder: number;
   isActive: boolean;
+  /** Size chart for products here; null = same as the parent category. */
+  sizeType?: SizeType | null;
   createdAt: string;
   updatedAt: string;
   _count?: { products: number };
@@ -66,6 +69,8 @@ export interface AdminProductImage {
   productId: string;
   url: string;
   alt: string | null;
+  /** Colour this photo shows; null = all colours. */
+  color: string | null;
   sortOrder: number;
 }
 

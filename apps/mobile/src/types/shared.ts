@@ -71,6 +71,7 @@ export interface ProductImageDto {
   id: string;
   url: string;
   alt: string | null;
+  color?: string | null;
   sortOrder: number;
 }
 
